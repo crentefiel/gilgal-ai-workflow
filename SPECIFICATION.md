@@ -1,8 +1,8 @@
 # GILGAL Specification
 
-Version: **0.1.0**
+Version: **0.2.0**
 
-This document defines the initial normative workflow for the GILGAL protocol.
+This document defines the normative workflow for the GILGAL protocol.
 
 The keywords **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** indicate requirement strength within this specification.
 
@@ -64,7 +64,23 @@ The diff **SHOULD** expose at least:
 
 When a regression is reported between a known-good version and a newer version, the agent **SHOULD** inspect the diff before attempting a broad rewrite.
 
-## 5. Automated validation
+## 5. GILGAL SENTINEL
+
+GILGAL SENTINEL is the verification layer between CANDIDATE and the GILGAL Gate.
+
+A conforming Sentinel **SHOULD** evaluate five classes of evidence:
+
+1. code/static checks;
+2. automated tests;
+3. STABLE-vs-CANDIDATE regression contracts;
+4. runtime evidence;
+5. human-only validation where required.
+
+Sentinel **MAY** integrate external test engines and QA systems.
+
+Sentinel **MUST NOT** treat a successful build alone as sufficient evidence for promotion.
+
+## 6. Code and automated validation
 
 A project **MAY** define automated gates such as:
 
@@ -74,11 +90,16 @@ A project **MAY** define automated gates such as:
 - build;
 - lint;
 - static analysis;
-- security checks.
+- security checks;
+- end-to-end tests;
+- UI tests;
+- project-specific validators.
 
-A passing build **MUST NOT** by itself be treated as proof that the product still behaves correctly.
+Sentinel **MAY** consume results from tools such as TestSprite, Playwright, Vitest, Jest, pytest, CI systems, or equivalent tools.
 
-## 6. Regression contracts
+No specific external testing product is required by GILGAL.
+
+## 7. Regression contracts
 
 Projects using GILGAL **SHOULD** define critical behaviors as regression contracts.
 
@@ -90,9 +111,29 @@ Examples:
 - an existing data path still resolves;
 - a repeated message does not create duplicates.
 
-If a required contract fails for CANDIDATE while it passes for STABLE, the implementation **MUST** report a regression and **MUST** block promotion.
+If a required contract fails for CANDIDATE while it passes for STABLE, Sentinel **MUST** report a regression and the GILGAL Gate **MUST** block promotion.
 
-## 7. Human-only validation
+Critical contracts **SHOULD** be distinguishable from advisory/non-critical checks.
+
+A numeric or percentage score **MUST NOT** override a failed critical contract.
+
+## 8. Runtime validation
+
+Sentinel **MAY** inspect runtime evidence including:
+
+- crashes;
+- unhandled exceptions;
+- unexpected process exits;
+- retry loops;
+- timeout loops;
+- render loops;
+- failed state transitions;
+- resource warnings;
+- application logs.
+
+Runtime evidence **MUST NOT** expose secrets, tokens, customer files, or other sensitive data unnecessarily.
+
+## 9. Human-only validation
 
 Some checks depend on real-world observation, hardware, external accounts, or subjective acceptance.
 
@@ -108,9 +149,37 @@ An AI agent **MUST NOT** mark such a check as passed unless an authorized human 
 
 Without such evidence, the status **SHOULD** be PENDING or NOT TESTED.
 
-## 8. Promotion gate
+## 10. Sentinel result vocabulary
 
-Promotion from CANDIDATE to STABLE **MUST** be blocked when any required gate fails.
+Recommended statuses are:
+
+```text
+PASS
+FAIL
+PENDING
+NOT TESTED
+BLOCKED
+```
+
+An implementation **MUST NOT** report PASS when the relevant validation was not actually executed.
+
+## 11. Sentinel report
+
+A Sentinel report **SHOULD** identify:
+
+- STABLE reference;
+- CANDIDATE reference;
+- code-check status;
+- automated-test status;
+- regression-check status;
+- runtime-check status;
+- human-check status;
+- critical regressions found;
+- final promotion recommendation.
+
+## 12. Promotion gate
+
+Promotion from CANDIDATE to STABLE **MUST** be blocked when any required gate fails or remains pending when that pending check is mandatory.
 
 Promotion **SHOULD** require:
 
@@ -123,7 +192,7 @@ Promotion **SHOULD** require:
 
 Promotion **SHOULD** be explicit rather than silent.
 
-## 9. Promotion
+## 13. Promotion
 
 A successful promotion creates a new STABLE state.
 
@@ -131,7 +200,7 @@ Version-control-native mechanisms **SHOULD** be preferred over raw directory cop
 
 When possible, a promotion **SHOULD** preserve an easy rollback reference such as a tag or immutable commit.
 
-## 10. Rejection
+## 14. Rejection
 
 When a candidate fails:
 
@@ -140,7 +209,7 @@ When a candidate fails:
 - the candidate **MAY** be archived as FAILED;
 - the candidate **MAY** be discarded after safe confirmation.
 
-## 11. Memory principle
+## 15. Memory principle
 
 GILGAL treats the last working implementation as part of the agent's operational memory.
 
@@ -148,7 +217,7 @@ Documentation explains intent. STABLE provides executable historical evidence.
 
 For regression diagnosis, the agent **SHOULD** compare known-good code and candidate code before inventing a replacement implementation.
 
-## 12. Suggested Git mapping
+## 16. Suggested Git mapping
 
 One possible mapping is:
 
@@ -162,35 +231,45 @@ A separate worktree may expose CANDIDATE as a physical folder while sharing Git 
 
 The exact branch names are implementation details and are not mandatory.
 
-## 13. Minimal result vocabulary
-
-For real validation reports, GILGAL recommends unambiguous statuses such as:
-
-```text
-PASS
-FAIL
-PENDING
-NOT TESTED
-```
-
-An implementation **MUST NOT** report PASS when the relevant validation was not actually executed.
-
-## 14. Security and data safety
+## 17. Security and data safety
 
 A GILGAL workflow **MUST NOT** treat production secrets, user data, session tokens, databases, or customer files as ordinary version-controlled source code.
 
 Workspaces and test environments **SHOULD** use safe test data whenever possible.
 
-## 15. Core invariant
+## 18. Component model
 
-The defining invariant of GILGAL is:
+A complete GILGAL workflow may be understood as:
+
+```text
+GILGAL
+  protects the last known-good state
+
+GILGAL SENTINEL
+  verifies the candidate and detects regressions
+
+GILGAL GATE
+  controls promotion
+
+GILGAL HISTORY
+  records cycle outcomes and evidence
+```
+
+## 19. Core invariants
+
+The defining GILGAL invariant is:
 
 > **A failed experiment must not destroy the last known-good state.**
+
+The defining Sentinel invariant is:
+
+> **A candidate must not be promoted merely because it compiles; it must preserve every required verified contract.**
 
 Or, equivalently:
 
 ```text
 STABLE is protected.
 WORK is experimental.
+SENTINEL verifies.
 PROMOTION is gated.
 ```
