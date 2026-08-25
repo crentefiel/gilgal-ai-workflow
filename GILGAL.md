@@ -82,6 +82,8 @@ O Sentinel é agnóstico de ferramenta. Ele pode consumir resultados de TestSpri
 
 Se um contrato crítico passa no STABLE e falha no CANDIDATE, o Sentinel deve reportar regressão e o GILGAL Gate deve bloquear a promoção.
 
+Este repositório contém a **GILGAL Sentinel Reference Implementation 0.1.0**, um motor local em Node.js/TypeScript. A versão `0.1.0` identifica a implementação, enquanto `0.2.0` continua identificando a versão atual do protocolo GILGAL. O motor observa, testa e reporta; não promove código e não modifica STABLE.
+
 ## Memória executável
 
 Documentação ajuda o agente a entender por que uma parte existe.

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "stable": {
+    "ref": "main"
+  },
+  "candidate": {
+    "ref": "HEAD"
+  },
+  "checks": {
+    "typecheck": {
+      "enabled": true,
+      "critical": true,
+      "command": "npm run typecheck",
+      "timeoutMs": 120000
+    },
+    "tests": {
+      "enabled": true,
+      "critical": true,
+      "command": "npm test"
+    },
+    "build": {
+      "enabled": true,
+      "critical": true,
+      "command": "npm run build"
+    }
+  },
+  "contractsFile": "gilgal.contracts.json",
+  "reports": {
+    "directory": ".gilgal/reports",
+    "json": true,
+    "markdown": true,
+    "includeDiff": false
+  },
+  "defaults": {
+    "timeoutMs": 120000,
+    "outputLimitBytes": 51200
+  },
+  "git": {
+    "requireCleanWorkingTree": true,
+    "requireStableAncestor": true
+  },
+  "gate": {
+    "blockOnNonCriticalFailure": false
+  }
+}

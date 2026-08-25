@@ -1,0 +1,11 @@
+export { SENTINEL_VERSION } from './version.js';
+export { loadConfig, resolveProjectPath } from './config.js';
+export { runSentinelCheck } from './sentinel.js';
+export { runCommand, runExecutable, parseCommand } from './runner/command-runner.js';
+export { loadContracts } from './contracts/contract-loader.js';
+export { loadBaseline } from './contracts/baseline.js';
+export { evaluateGate } from './gate.js';
+export { GitClient, allowedGitSubcommands } from './git/git-client.js';
+export { calculateDiff } from './git/diff.js';
+export { StateStore } from './state/state-store.js';
+export type * from './types.js';

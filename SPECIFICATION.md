@@ -1,6 +1,6 @@
 # GILGAL Specification
 
-Version: **0.2.0**
+GILGAL protocol version: **0.2.0**
 
 This document defines the normative workflow for the GILGAL protocol.
 
@@ -79,6 +79,10 @@ A conforming Sentinel **SHOULD** evaluate five classes of evidence:
 Sentinel **MAY** integrate external test engines and QA systems.
 
 Sentinel **MUST NOT** treat a successful build alone as sufficient evidence for promotion.
+
+### 5.1 Reference implementation
+
+The repository's GILGAL Sentinel Reference Implementation has its own version, **0.1.0**, independent from this protocol version. It is an evidence provider for the Gate and **MUST NOT** perform promotion, modify STABLE, or manufacture human approval.
 
 ## 6. Code and automated validation
 

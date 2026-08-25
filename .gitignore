@@ -1,0 +1,10 @@
+# Sentinel implementation build/dependencies
+sentinel/node_modules/
+sentinel/dist/
+
+# Local, ephemeral Sentinel evidence
+.gilgal/state/
+.gilgal/reports/
+
+# Configuration, contracts and verified baselines are intentionally versionable.
+!.gilgal/baselines/

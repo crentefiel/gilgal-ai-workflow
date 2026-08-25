@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "contracts": [
+    {
+      "id": "login-flow",
+      "name": "Login flow",
+      "critical": true,
+      "type": "command",
+      "command": "npm run test:login"
+    },
+    {
+      "id": "physical-device",
+      "name": "Physical device validation",
+      "critical": true,
+      "type": "manual"
+    }
+  ]
+}

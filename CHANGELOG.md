@@ -2,6 +2,22 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## GILGAL Sentinel reference implementation 0.1.0 — 2026-08-25
+
+This implementation version is independent from the GILGAL protocol version.
+
+### Added
+
+- Node.js/TypeScript CLI with `check`, `status`, `report`, `approve`, `revoke`, and `reset`.
+- Read-only Git ref, merge-base, ancestry, working-tree, and diff evidence.
+- Generic shell-free command runner with timeout, cancellation, and bounded logs.
+- Configured automated checks and `command`/`manual` contracts.
+- SHA-bound local human approvals with stale-approval detection.
+- Exact-STABLE-SHA baseline loading and critical regression detection.
+- JSON and Markdown reports, CI exit codes, and READY/BLOCKED gate evaluation.
+- Unit, integration, and Git read-only protection tests.
+- Configuration/contracts/baseline versioning policy and local-state ignore policy.
+
 ## 0.2.0 — 2026-08-25
 
 Introduced **GILGAL SENTINEL**, the verification and regression-detection layer.

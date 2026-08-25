@@ -115,6 +115,12 @@ Sentinel is tool-agnostic. It may consume results from TestSprite, Playwright, V
 
 A critical contract failing in CANDIDATE while passing in STABLE must block promotion.
 
+### Reference implementation
+
+This repository now includes **GILGAL Sentinel Reference Implementation 0.1.0** in [`sentinel/`](sentinel/README.md). Its implementation version is independent from the GILGAL protocol version.
+
+The local TypeScript CLI resolves STABLE/CANDIDATE Git evidence, runs configured checks, evaluates `command` and human-approved `manual` contracts, compares exact-SHA baselines, writes JSON/Markdown reports, and returns CI-compatible gate exit codes. It never promotes code or mutates STABLE.
+
 ## Core principles
 
 1. **Protect the last known-good state.**
@@ -199,6 +205,7 @@ That makes the working code itself part of the project's memory.
 - [SENTINEL.md](SENTINEL.md) — verification and regression-detection layer
 - [SPECIFICATION.md](SPECIFICATION.md) — normative workflow and state transitions
 - [CHANGELOG.md](CHANGELOG.md) — concept history
+- [sentinel/README.md](sentinel/README.md) — Sentinel 0.1.0 installation, CLI, configuration and security
 
 ## Scope and prior art note
 
@@ -212,6 +219,6 @@ This repository documents the concept and its evolution. It does not make a clai
 
 ## Status
 
-**GILGAL 0.2.0 — introduces GILGAL SENTINEL, the verification and regression-detection layer.**
+**GILGAL protocol 0.2.0 + GILGAL Sentinel reference implementation 0.1.0.**
 
 Feedback, experiments and reference implementations are welcome.

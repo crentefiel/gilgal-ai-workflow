@@ -1,6 +1,8 @@
 # GILGAL SENTINEL
 
-Version: **0.2.0**
+GILGAL protocol version: **0.2.0**
+
+Reference implementation version: **0.1.0**
 
 **Concept documented by:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **Part of:** GILGAL
@@ -10,6 +12,8 @@ Version: **0.2.0**
 **GILGAL SENTINEL** is the verification layer of the GILGAL workflow.
 
 GILGAL protects the last known-good state. Sentinel inspects the candidate before the GILGAL Gate decides whether promotion may occur.
+
+The local reference implementation lives in [`sentinel/`](sentinel/README.md). It observes, tests, and reports. It never promotes a candidate, changes STABLE, or self-approves a human-only contract.
 
 The central question is not only:
 
@@ -69,6 +73,8 @@ Sentinel SHOULD run or integrate with the project's available test engines, such
 GILGAL Sentinel is tool-agnostic. It MAY consume results from TestSprite, Playwright, Vitest, Jest, pytest, CI systems, or other test providers.
 
 No single external tool is mandatory.
+
+A test engine executes a particular test. Sentinel combines evidence from multiple engines, compares CANDIDATE with verified STABLE behavior, detects regressions, and determines whether Gate requirements have been met. TestSprite can feed Sentinel as a future external QA provider; Sentinel is not a TestSprite clone.
 
 ### 3. REGRESSION CHECK
 
