@@ -44,16 +44,43 @@ IA altera somente WORK
   ↓
 diff
   ↓
-typecheck / testes / build
-  ↓
-contratos de regressão
-  ↓
-validações humanas, quando necessárias
+GILGAL SENTINEL
+  ├── code checks
+  ├── testes automatizados
+  ├── comparação STABLE x CANDIDATE
+  ├── detecção de regressão
+  ├── runtime/logs
+  └── validações humanas quando necessárias
   ↓
 GILGAL GATE
-  ├── FAIL → promoção bloqueada; STABLE permanece intacto
-  └── PASS → candidato pode ser promovido
+  ├── FAIL/PENDING → promoção bloqueada; STABLE permanece intacto
+  └── PASS         → candidato pode ser promovido
 ```
+
+## GILGAL SENTINEL
+
+A partir da versão conceitual 0.2.0, o GILGAL inclui uma camada formal de verificação chamada **GILGAL SENTINEL**.
+
+O Sentinel existe para responder não apenas:
+
+> O código novo funciona?
+
+mas também:
+
+> O candidato continua preservando tudo o que já estava comprovadamente funcionando no STABLE?
+
+O Sentinel pode combinar:
+
+- typecheck, lint e análise estática;
+- testes unitários, integração, UI e end-to-end;
+- comparação de contratos entre STABLE e CANDIDATE;
+- análise de logs e comportamento em runtime;
+- resultados vindos de ferramentas externas de QA;
+- validações humanas para comportamentos que a IA não pode comprovar sozinha.
+
+O Sentinel é agnóstico de ferramenta. Ele pode consumir resultados de TestSprite, Playwright, Vitest, Jest, pytest, CI ou outros motores de teste.
+
+Se um contrato crítico passa no STABLE e falha no CANDIDATE, o Sentinel deve reportar regressão e o GILGAL Gate deve bloquear a promoção.
 
 ## Memória executável
 
@@ -82,7 +109,25 @@ Assim, a versão funcional anterior passa a fazer parte da memória operacional 
 7. Promoção exige gate explícito.
 8. Tentativas falhas podem ser preservadas para investigação.
 9. O código estável anterior é uma fonte de verdade histórica.
-10. O sistema deve ser simples, auditável e reversível.
+10. O Sentinel deve comparar contratos comprovados entre STABLE e CANDIDATE.
+11. Uma pontuação alta nunca pode esconder a falha de um contrato crítico.
+12. O sistema deve ser simples, auditável e reversível.
+
+## Ecossistema GILGAL
+
+```text
+GILGAL
+protege o último código comprovadamente bom
+
+GILGAL SENTINEL
+verifica o candidato e procura erros/regressões
+
+GILGAL GATE
+controla se a promoção pode acontecer
+
+GILGAL HISTORY
+registra o que aconteceu em cada ciclo
+```
 
 ## Mecanismos sugeridos
 
@@ -96,6 +141,7 @@ Uma implementação GILGAL pode usar ferramentas já existentes, como:
 - contratos de regressão
 - tags de rollback
 - aprovação manual
+- ferramentas externas de QA
 
 O GILGAL não afirma ter inventado esses mecanismos. O conceito documentado aqui é o **protocolo específico que combina esses mecanismos para reduzir regressões em trabalho feito por agentes de IA**.
 
@@ -108,9 +154,12 @@ recebimento automático de arquivo = PASS
 CANDIDATE: beta.13
 recebimento automático de arquivo = FAIL
 
-Resultado GILGAL:
+GILGAL SENTINEL:
 REGRESSION DETECTED
+
+GILGAL GATE:
 PROMOTION BLOCKED
+
 STABLE continua disponível
 ```
 
@@ -135,7 +184,7 @@ corrigir bug A em WORK
 ↓
 comparar com STABLE
 ↓
-validar contratos
+Sentinel valida contratos
 ↓
 se B quebrar, bloquear promoção
 ```
@@ -148,6 +197,6 @@ Este repositório documenta sua evolução e possíveis implementações de refe
 
 ## Nota sobre anterioridade técnica
 
-Branches, worktrees, CI, staging, rollback e promotion gates são práticas existentes na engenharia de software.
+Branches, worktrees, CI, staging, rollback, promotion gates e ferramentas de teste são práticas existentes na engenharia de software.
 
 A documentação deste repositório não faz afirmação de patente, exclusividade jurídica ou novidade mundial. Ela registra publicamente o conceito GILGAL, sua formulação, seus princípios e sua evolução neste projeto.
