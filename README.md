@@ -8,7 +8,7 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 **Concept documented by:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **First public specification:** 2026-08-25  
-**Current concept version:** 0.1.0
+**Current concept version:** 0.2.0
 
 ---
 
@@ -40,16 +40,28 @@ WORK
   └── testes humanos quando necessários
   │
   ▼
+GILGAL SENTINEL
+  │
+  ├── verifica código
+  ├── executa/consome testes
+  ├── compara STABLE x CANDIDATE
+  ├── procura regressões
+  ├── analisa runtime/logs
+  └── exige validação humana quando necessário
+  │
+  ▼
 GILGAL GATE
   │
-  ├── FAIL  → STABLE permanece intacto
+  ├── FAIL/PENDING → STABLE permanece intacto
   │
-  └── PASS  → candidato pode ser promovido
+  └── PASS         → candidato pode ser promovido
 ```
 
 Se a tentativa falhar, a versão funcional anterior continua preservada e pode ser usada como **memória executável** para comparar o que mudou.
 
-O GILGAL não tenta substituir Git, branches, worktrees, CI ou testes. Ele organiza esses mecanismos em um protocolo específico para agentes de IA.
+O GILGAL não tenta substituir Git, branches, worktrees, CI ou ferramentas de teste. Ele organiza esses mecanismos em um protocolo específico para agentes de IA.
+
+O **GILGAL SENTINEL** é a camada de verificação. Ele não pergunta apenas se o código novo compila; ele pergunta se o candidato continua preservando os comportamentos que já eram comprovados no STABLE.
 
 ---
 
@@ -62,13 +74,14 @@ Its central idea is to keep the last verified version physically/logically prote
 ```mermaid
 flowchart TD
     S[STABLE<br/>Last known-good state] --> W[WORK / CANDIDATE<br/>AI edits here]
-    W --> D[Diff + automated checks]
-    D --> R[Regression contracts]
+    W --> N[GILGAL SENTINEL<br/>verification layer]
+    N --> D[Code checks + automated tests]
+    D --> R[STABLE vs CANDIDATE regression contracts]
     R --> H{Human-only checks required?}
     H -->|Yes| M[Manual validation]
     H -->|No| G{GILGAL Gate}
     M --> G
-    G -->|Fail| F[Reject or archive candidate]
+    G -->|Fail or pending| F[Reject, fix, or archive candidate]
     F --> S
     G -->|Pass + approval| P[Promote candidate]
     P --> S2[New STABLE]
@@ -86,6 +99,22 @@ into:
 
 > “Did the candidate preserve the verified behavior of the stable version?”
 
+## GILGAL Sentinel
+
+**GILGAL SENTINEL** is the verification layer introduced in 0.2.0.
+
+It may combine:
+
+- code/type/static checks;
+- automated tests;
+- STABLE vs CANDIDATE regression comparison;
+- runtime/log analysis;
+- human-only validation gates.
+
+Sentinel is tool-agnostic. It may consume results from TestSprite, Playwright, Vitest, Jest, pytest, CI systems, or other test engines.
+
+A critical contract failing in CANDIDATE while passing in STABLE must block promotion.
+
 ## Core principles
 
 1. **Protect the last known-good state.**
@@ -96,6 +125,7 @@ into:
 6. **Physical or real-world checks cannot be self-approved by the agent.**
 7. **Promotion is explicit and gated.**
 8. **Failed candidates may be preserved for diagnosis instead of overwriting history.**
+9. **Sentinel compares verified STABLE behavior against CANDIDATE behavior.**
 
 ## Suggested implementation
 
@@ -108,6 +138,7 @@ A practical implementation can use:
 - CI checks
 - manual approval gates
 - tags or commits for rollback points
+- optional external QA/test engines
 
 Example layout:
 
@@ -126,6 +157,7 @@ A candidate **MUST NOT** replace STABLE if any required gate fails.
 STABLE works
 CANDIDATE fails
         ↓
+GILGAL SENTINEL
 REGRESSION DETECTED
         ↓
 PROMOTION BLOCKED
@@ -164,14 +196,15 @@ That makes the working code itself part of the project's memory.
 ## Documents
 
 - [GILGAL.md](GILGAL.md) — concept, origin and principles
+- [SENTINEL.md](SENTINEL.md) — verification and regression-detection layer
 - [SPECIFICATION.md](SPECIFICATION.md) — normative workflow and state transitions
 - [CHANGELOG.md](CHANGELOG.md) — concept history
 
 ## Scope and prior art note
 
-Git branches, worktrees, CI, staging environments, rollback strategies and promotion gates are established software-engineering mechanisms.
+Git branches, worktrees, CI, staging environments, rollback strategies, promotion gates and automated testing are established software-engineering mechanisms.
 
-**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, promotion gates, and human-only validation for real-world tests.**
+**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, and human-only validation for real-world tests.**
 
 This repository documents the concept and its evolution. It does not make a claim of patent status or worldwide novelty.
 
@@ -179,6 +212,6 @@ This repository documents the concept and its evolution. It does not make a clai
 
 ## Status
 
-**GILGAL 0.1.0 — initial public concept specification.**
+**GILGAL 0.2.0 — introduces GILGAL SENTINEL, the verification and regression-detection layer.**
 
 Feedback, experiments and reference implementations are welcome.
