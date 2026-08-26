@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -42,3 +44,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Prepare STABLE ref
+        run: git branch -f main origin/main
+
+      - name: GILGAL Sentinel self-check
+        run: npm run sentinel -- check
