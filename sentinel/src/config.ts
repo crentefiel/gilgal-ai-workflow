@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ConfigurationError } from './errors.js';
-import type { CommandCheckConfig, SentinelConfig } from './types.js';
+import type { ChangeBudgetConfig, CommandCheckConfig, SentinelConfig } from './types.js';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_OUTPUT_LIMIT_BYTES = 50 * 1024;
@@ -70,6 +70,35 @@ function parseChecks(value: unknown): Record<string, CommandCheckConfig> {
     checks[id] = parsed;
   }
   return checks;
+}
+
+function parseChangeBudget(value: unknown): ChangeBudgetConfig {
+  if (value === undefined) {
+    return { enabled: false, critical: true };
+  }
+  if (!isRecord(value)) {
+    throw new ConfigurationError('changeBudget must be an object.');
+  }
+
+  const budget: ChangeBudgetConfig = {
+    enabled: optionalBoolean(value, 'enabled', false),
+    critical: optionalBoolean(value, 'critical', true),
+  };
+  if (value.maxFiles !== undefined) budget.maxFiles = optionalPositiveInteger(value, 'maxFiles', 1);
+  if (value.maxInsertions !== undefined) budget.maxInsertions = optionalPositiveInteger(value, 'maxInsertions', 1);
+  if (value.maxDeletions !== undefined) budget.maxDeletions = optionalPositiveInteger(value, 'maxDeletions', 1);
+  if (value.maxChangedLines !== undefined) budget.maxChangedLines = optionalPositiveInteger(value, 'maxChangedLines', 1);
+
+  if (
+    budget.enabled
+    && budget.maxFiles === undefined
+    && budget.maxInsertions === undefined
+    && budget.maxDeletions === undefined
+    && budget.maxChangedLines === undefined
+  ) {
+    throw new ConfigurationError('changeBudget requires at least one limit when enabled.');
+  }
+  return budget;
 }
 
 export function resolveProjectPath(projectRoot: string, configuredPath: string, label: string): string {
@@ -142,6 +171,7 @@ export async function loadConfig(configPath = 'gilgal.sentinel.json', cwd = proc
       stable: { ref: requiredString(raw.stable, 'ref', 'stable') },
       candidate: { ref: requiredString(raw.candidate, 'ref', 'candidate') },
       checks: parseChecks(raw.checks ?? {}),
+      changeBudget: parseChangeBudget(raw.changeBudget),
       contractsFile,
       reports: {
         directory: reportsDirectory,
