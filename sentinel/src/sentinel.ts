@@ -7,10 +7,11 @@ import { StateStore } from './state/state-store.js';
 import { GitClient } from './git/git-client.js';
 import { collectGitEvidence } from './git/evidence.js';
 import { calculateDiff, getFullDiff } from './git/diff.js';
+import { evaluateChangeBudget } from './checks/change-budget.js';
 import { evaluateGate } from './gate.js';
 import { SENTINEL_VERSION } from './version.js';
 import { writeReports, type WrittenReports } from './report/reporter.js';
-import type { CheckResult, Regression, SentinelConfig, SentinelReport } from './types.js';
+import type { CheckResult, ContractResult, Regression, SentinelConfig, SentinelReport } from './types.js';
 
 function gitValidationResults(config: SentinelConfig, stableIsAncestor: boolean, workingTreeClean: boolean): CheckResult[] {
   const now = new Date().toISOString();
@@ -53,6 +54,18 @@ function summarize(report: Pick<SentinelReport, 'checks' | 'contracts'>): Sentin
   };
 }
 
+function summarizeReplay(contracts: ContractResult[]): SentinelReport['regressionReplay'] {
+  const replay = contracts.filter((item) => item.type === 'replay');
+  return {
+    total: replay.length,
+    pass: replay.filter((item) => item.status === 'PASS').length,
+    fail: replay.filter((item) => item.status === 'FAIL').length,
+    pending: replay.filter((item) => item.status === 'PENDING').length,
+    error: replay.filter((item) => item.status === 'ERROR').length,
+    skipped: replay.filter((item) => item.status === 'SKIPPED').length,
+  };
+}
+
 export async function runSentinelCheck(
   config: SentinelConfig,
   projectRoot: string,
@@ -66,8 +79,11 @@ export async function runSentinelCheck(
   let contracts: SentinelReport['contracts'] = [];
 
   if (gitChecks.length === 0) {
-    checks = await runChecks(config, projectRoot, signal);
+    const automatedChecks = await runChecks(config, projectRoot, signal);
     if (signal?.aborted) throw new InterruptedError();
+    const changeBudget = evaluateChangeBudget(diff, config.changeBudget);
+    checks = changeBudget ? [changeBudget, ...automatedChecks] : automatedChecks;
+
     const contractsDocument = await loadContracts(projectRoot, config.contractsFile);
     const state = new StateStore(projectRoot, config.stateDirectory);
     const [approvals, baseline] = await Promise.all([
@@ -111,6 +127,7 @@ export async function runSentinelCheck(
     checks,
     contracts,
     regressions,
+    regressionReplay: summarizeReplay(contracts),
     summary: { pass: 0, fail: 0, pending: 0, error: 0, skipped: 0 },
     gate,
   };
