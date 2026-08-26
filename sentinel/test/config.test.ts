@@ -15,6 +15,34 @@ test('loads a valid configuration and applies defaults', async () => {
     assert.equal(loaded.config.version, 1);
     assert.equal(loaded.config.defaults.outputLimitBytes, 50 * 1024);
     assert.equal(loaded.config.git.requireStableAncestor, true);
+    assert.equal(loaded.config.changeBudget.enabled, false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('loads an enabled change budget and rejects an enabled budget without limits', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'sentinel-config-'));
+  try {
+    await writeJson(directory, 'budget.json', {
+      ...basicConfig(),
+      changeBudget: {
+        enabled: true,
+        critical: true,
+        maxFiles: 8,
+        maxChangedLines: 500,
+      },
+    });
+    const loaded = await loadConfig('budget.json', directory);
+    assert.equal(loaded.config.changeBudget.enabled, true);
+    assert.equal(loaded.config.changeBudget.maxFiles, 8);
+    assert.equal(loaded.config.changeBudget.maxChangedLines, 500);
+
+    await writeJson(directory, 'bad-budget.json', {
+      ...basicConfig(),
+      changeBudget: { enabled: true },
+    });
+    await assert.rejects(() => loadConfig('bad-budget.json', directory), /at least one limit/);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
