@@ -1,10 +1,19 @@
 # GILGAL Sentinel reference implementation
 
-Version: **0.1.0**
+Version: **0.2.0**
 
-This directory contains the first local reference implementation of GILGAL Sentinel. The implementation version is independent from the GILGAL protocol version.
+This directory contains the local reference implementation of GILGAL Sentinel. The implementation version is independent from the GILGAL protocol version.
 
 Sentinel is a verification orchestrator, regression comparator, contract evaluator, and promotion-gate evidence provider. It observes, runs explicitly configured checks, and reports. It does not merge, checkout, reset, clean, push, promote a candidate, or modify STABLE.
+
+Sentinel 0.2.0 adds two guarded-development mechanisms:
+
+- **Change Budget** — detects scope expansion when a candidate changes more files or lines than the project explicitly allows.
+- **Regression Replay** — lets a previously fixed bug become a replayable contract that runs against future candidates.
+
+The guiding rule is:
+
+> **Every regression should become a contract.**
 
 ## Requirements and installation
 
@@ -41,7 +50,7 @@ gilgal sentinel reset
 
 All commands accept `--config <path>`. The default is `gilgal.sentinel.json` in the current directory.
 
-`check` resolves both refs and their merge base, validates that STABLE is an ancestor of CANDIDATE, requires a clean working tree by default, computes the diff, runs checks and contracts sequentially, evaluates regressions, writes JSON/Markdown evidence, and returns the gate exit code.
+`check` resolves both refs and their merge base, validates that STABLE is an ancestor of CANDIDATE, requires a clean working tree by default, computes the diff, evaluates Change Budget, runs checks and contracts sequentially, evaluates regressions, writes JSON/Markdown evidence, and returns the gate exit code.
 
 `status` compares current Git SHAs with the last report and warns when that report is stale. `report` renders the last locally recorded report. `reset` removes only the configured local state directory after confirmation (or with `--yes`); it does not remove reports, baselines, source code, or Git data.
 
@@ -67,14 +76,68 @@ The retained stdout/stderr is limited to the tail of the configured number of by
 
 All configured paths are resolved relative to the configuration file and must remain within that project root.
 
+## Change Budget
+
+Change Budget is optional and disabled when the configuration omits it. When enabled, at least one explicit limit is required.
+
+```json
+{
+  "changeBudget": {
+    "enabled": true,
+    "critical": true,
+    "maxFiles": 12,
+    "maxInsertions": 1200,
+    "maxDeletions": 600,
+    "maxChangedLines": 1500
+  }
+}
+```
+
+Sentinel compares these limits with the Git diff between the exact STABLE and CANDIDATE SHAs. If a limit is exceeded the check returns `FAIL` with a `SCOPE EXPANSION DETECTED` summary. When the budget is critical, the GILGAL Gate is blocked.
+
+The budget does not decide whether a large change is bad. It forces a large or unexpectedly broad change to be explicitly reviewed instead of silently passing as a small task.
+
 ## Contracts
 
-The MVP implements two provider types:
+Sentinel 0.2.0 implements three contract types:
 
 - `command`: exit 0 is `PASS`, non-zero is `FAIL`, timeout/start failure is `ERROR`.
 - `manual`: no matching human approval is `PENDING`.
+- `replay`: a command contract that represents a regression which was already found and fixed in the past.
 
-See [contracts.example.json](examples/contracts.example.json). The `SentinelProvider` interface leaves room for future adapters such as Playwright, TestSprite, GitHub Actions, Sentry, HTTP, file, log, and UI evidence, but none is bundled in 0.1.0.
+See [contracts.example.json](examples/contracts.example.json). The `SentinelProvider` interface leaves room for future adapters such as Playwright, TestSprite, GitHub Actions, Sentry, HTTP, file, log, and UI evidence.
+
+### Regression Replay
+
+A replay contract turns a historical bug into permanent executable memory:
+
+```json
+{
+  "id": "qr-auth-regression",
+  "name": "QR authentication leaves waiting screen",
+  "critical": true,
+  "type": "replay",
+  "origin": "Regression fixed after the UI remained on the QR screen after authentication",
+  "description": "The regression must never return in a promoted candidate.",
+  "command": "npm run test:qr-auth-regression"
+}
+```
+
+`origin` and `description` are optional metadata. `command` must still be an explicitly reviewed project command; Sentinel never invents a replay command from logs, issues, diffs, README text, or AI output.
+
+Replay results appear in a dedicated **Regression Replay** section of Markdown reports and in the `regressionReplay` summary of JSON reports. If the exact STABLE baseline records `PASS` and the replay returns `FAIL` for CANDIDATE, Sentinel records a regression and blocks promotion when critical.
+
+This gives the project a growing memory:
+
+```text
+bug discovered
+    ↓
+fix verified
+    ↓
+reproducible check recorded as type=replay
+    ↓
+future candidates replay the old failure condition
+```
 
 ### Human approval
 
@@ -94,7 +157,8 @@ Verified STABLE results may be committed as:
 {
   "stableSha": "abc123...",
   "contracts": {
-    "login-flow": "PASS"
+    "login-flow": "PASS",
+    "qr-auth-regression": "PASS"
   }
 }
 ```
@@ -132,4 +196,4 @@ Sentinel never executes commands found in README files, issues, commit messages,
 
 A test engine executes a particular test. Sentinel aggregates evidence from multiple engines, compares it with verified STABLE behavior, detects regressions, and determines whether the GILGAL Gate requirements are satisfied.
 
-TestSprite can be a future external QA engine whose result feeds a contract. Sentinel is not a TestSprite clone, and 0.1.0 has no TestSprite dependency.
+TestSprite can be a future external QA engine whose result feeds a contract. Sentinel is not a TestSprite clone, and 0.2.0 has no TestSprite dependency.
