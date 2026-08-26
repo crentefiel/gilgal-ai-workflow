@@ -14,6 +14,15 @@ export interface CommandCheckConfig {
   outputLimitBytes?: number;
 }
 
+export interface ChangeBudgetConfig {
+  enabled: boolean;
+  critical: boolean;
+  maxFiles?: number;
+  maxInsertions?: number;
+  maxDeletions?: number;
+  maxChangedLines?: number;
+}
+
 export interface ReportsConfig {
   directory: string;
   json: boolean;
@@ -26,6 +35,7 @@ export interface SentinelConfig {
   stable: RefConfig;
   candidate: RefConfig;
   checks: Record<string, CommandCheckConfig>;
+  changeBudget: ChangeBudgetConfig;
   contractsFile: string;
   reports: ReportsConfig;
   stateDirectory: string;
@@ -68,6 +78,18 @@ export interface CommandContract {
   outputLimitBytes?: number;
 }
 
+export interface ReplayContract {
+  id: string;
+  name: string;
+  critical: boolean;
+  type: 'replay';
+  command: string;
+  timeoutMs?: number;
+  outputLimitBytes?: number;
+  origin?: string;
+  description?: string;
+}
+
 export interface ManualContract {
   id: string;
   name: string;
@@ -75,7 +97,7 @@ export interface ManualContract {
   type: 'manual';
 }
 
-export type Contract = CommandContract | ManualContract;
+export type Contract = CommandContract | ReplayContract | ManualContract;
 
 export interface ContractsDocument {
   version: 1;
@@ -101,6 +123,8 @@ export interface ContractResult extends CheckResult {
   candidateResult: CheckStatus;
   regression: boolean;
   approvalState?: 'VALID' | 'MISSING' | 'STALE';
+  replayOrigin?: string;
+  replayDescription?: string;
 }
 
 export interface DiffSummary {
@@ -151,6 +175,14 @@ export interface SentinelReport {
   checks: CheckResult[];
   contracts: ContractResult[];
   regressions: Regression[];
+  regressionReplay: {
+    total: number;
+    pass: number;
+    fail: number;
+    pending: number;
+    error: number;
+    skipped: number;
+  };
   summary: {
     pass: number;
     fail: number;
