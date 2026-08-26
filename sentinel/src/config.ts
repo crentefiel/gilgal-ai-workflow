@@ -38,6 +38,15 @@ function optionalPositiveInteger(parent: UnknownRecord, key: string, fallback: n
   return value as number;
 }
 
+function optionalNonNegativeInteger(parent: UnknownRecord, key: string, fallback: number): number {
+  const value = parent[key];
+  if (value === undefined) return fallback;
+  if (!Number.isInteger(value) || (value as number) < 0) {
+    throw new ConfigurationError(`${key} must be a non-negative integer.`);
+  }
+  return value as number;
+}
+
 function parseChecks(value: unknown): Record<string, CommandCheckConfig> {
   if (!isRecord(value)) {
     throw new ConfigurationError('checks must be an object.');
@@ -84,10 +93,10 @@ function parseChangeBudget(value: unknown): ChangeBudgetConfig {
     enabled: optionalBoolean(value, 'enabled', false),
     critical: optionalBoolean(value, 'critical', true),
   };
-  if (value.maxFiles !== undefined) budget.maxFiles = optionalPositiveInteger(value, 'maxFiles', 1);
-  if (value.maxInsertions !== undefined) budget.maxInsertions = optionalPositiveInteger(value, 'maxInsertions', 1);
-  if (value.maxDeletions !== undefined) budget.maxDeletions = optionalPositiveInteger(value, 'maxDeletions', 1);
-  if (value.maxChangedLines !== undefined) budget.maxChangedLines = optionalPositiveInteger(value, 'maxChangedLines', 1);
+  if (value.maxFiles !== undefined) budget.maxFiles = optionalNonNegativeInteger(value, 'maxFiles', 0);
+  if (value.maxInsertions !== undefined) budget.maxInsertions = optionalNonNegativeInteger(value, 'maxInsertions', 0);
+  if (value.maxDeletions !== undefined) budget.maxDeletions = optionalNonNegativeInteger(value, 'maxDeletions', 0);
+  if (value.maxChangedLines !== undefined) budget.maxChangedLines = optionalNonNegativeInteger(value, 'maxChangedLines', 0);
 
   if (
     budget.enabled
