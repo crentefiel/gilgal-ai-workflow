@@ -1,0 +1,52 @@
+name: Sentinel CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'gilgal/candidate/**'
+    paths:
+      - 'sentinel/**'
+      - 'gilgal.sentinel.json'
+      - 'gilgal.contracts.json'
+      - '.github/workflows/sentinel-ci.yml'
+  pull_request:
+    paths:
+      - 'sentinel/**'
+      - 'gilgal.sentinel.json'
+      - 'gilgal.contracts.json'
+      - '.github/workflows/sentinel-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sentinel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: sentinel/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Prepare STABLE ref
+        run: git branch -f main origin/main
+
+      - name: GILGAL Sentinel self-check
+        run: npm run sentinel -- check

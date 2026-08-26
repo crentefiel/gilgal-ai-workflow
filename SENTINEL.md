@@ -1,8 +1,8 @@
 # GILGAL SENTINEL
 
-GILGAL protocol version: **0.2.0**
+GILGAL protocol version: **0.3.0**
 
-Reference implementation version: **0.1.0**
+Reference implementation version: **0.2.0**
 
 **Concept documented by:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **Part of:** GILGAL
@@ -30,10 +30,13 @@ STABLE
   ↓
 WORK / CANDIDATE
   ↓
+Change Budget
+  ↓
 GILGAL SENTINEL
   ├── code checks
   ├── automated tests
   ├── regression comparison
+  ├── Regression Replay
   ├── runtime checks
   └── human-only checks
   ↓
@@ -96,6 +99,54 @@ PROMOTION BLOCKED
 
 When possible, Sentinel SHOULD also inspect the code diff between STABLE and CANDIDATE to help isolate the change responsible for the regression.
 
+### 3.1 REGRESSION REPLAY
+
+A regression that was found, fixed, and can be reproduced SHOULD become a replayable contract.
+
+Recommended rule:
+
+> **Every regression should become a contract.**
+
+The reference implementation uses `type: "replay"` contracts. They behave like reviewed command checks but are identified separately as historical regression memory.
+
+Example:
+
+```json
+{
+  "id": "qr-auth-regression",
+  "name": "QR authentication leaves waiting screen",
+  "critical": true,
+  "type": "replay",
+  "origin": "Previously fixed authentication/UI regression",
+  "command": "npm run test:qr-auth-regression"
+}
+```
+
+Sentinel MUST NOT invent replay commands from arbitrary text. A replay must point to an explicitly reviewed project test or script.
+
+If the exact STABLE baseline records `PASS` and CANDIDATE returns `FAIL`, the replay is a regression and the Gate MUST block when the contract is critical.
+
+### 3.2 CHANGE BUDGET
+
+A project MAY define an explicit budget for the size of a candidate change.
+
+The reference implementation can limit:
+
+- changed files;
+- insertions;
+- deletions;
+- total changed lines.
+
+When a configured limit is exceeded, Sentinel reports:
+
+```text
+SCOPE EXPANSION DETECTED
+```
+
+A critical Change Budget failure blocks the Gate.
+
+Change Budget does not claim that large changes are inherently incorrect. It exists to expose a mismatch between expected task scope and actual candidate scope so that expansion cannot remain invisible.
+
 ### 4. RUNTIME CHECK
 
 Sentinel MAY inspect runtime evidence such as:
@@ -155,11 +206,18 @@ BLOCKED
 Candidate:
 Stable reference:
 
+CHANGE BUDGET
+status:
+
 CODE CHECK
 status:
 
 AUTOMATED TEST
 status:
+
+REGRESSION REPLAY
+status:
+replays executed:
 
 REGRESSION CHECK
 status:
@@ -216,6 +274,8 @@ It MAY integrate with tools such as TestSprite or other automated QA systems and
 - project contracts;
 - runtime evidence;
 - historical STABLE behavior;
+- Regression Replay;
+- Change Budget evidence;
 - manual approvals.
 
 ## Relationship between components
@@ -226,6 +286,12 @@ protects the last known-good code
 
 GILGAL SENTINEL
 verifies the candidate and searches for regressions
+
+REGRESSION REPLAY
+turns old failures into reusable executable memory
+
+CHANGE BUDGET
+makes unexpected scope expansion visible
 
 GILGAL GATE
 controls promotion

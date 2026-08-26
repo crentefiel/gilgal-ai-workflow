@@ -21,6 +21,20 @@ export function renderMarkdownReport(report: SentinelReport): string {
     : report.regressions
       .map((item) => `- ${item.contractId}: ${item.stableResult} → ${item.candidateResult}${item.critical ? ' (critical)' : ''}`)
       .join('\n');
+  const regularContracts = report.contracts.filter((item) => item.type !== 'replay');
+  const replayContracts = report.contracts.filter((item) => item.type === 'replay');
+  const replay = report.regressionReplay ?? {
+    total: replayContracts.length,
+    pass: replayContracts.filter((item) => item.status === 'PASS').length,
+    fail: replayContracts.filter((item) => item.status === 'FAIL').length,
+    pending: replayContracts.filter((item) => item.status === 'PENDING').length,
+    error: replayContracts.filter((item) => item.status === 'ERROR').length,
+    skipped: replayContracts.filter((item) => item.status === 'SKIPPED').length,
+  };
+  const replaySummary = replay.total === 0
+    ? 'No replay contracts configured.'
+    : `${replay.pass} PASS / ${replay.fail} FAIL / ${replay.pending} PENDING / ${replay.error} ERROR / ${replay.skipped} SKIPPED`;
+
   return `# GILGAL SENTINEL REPORT
 
 Sentinel implementation: **${report.sentinelVersion}**
@@ -44,7 +58,13 @@ ${resultTable(report.checks)}
 
 ## Contracts
 
-${resultTable(report.contracts)}
+${resultTable(regularContracts)}
+
+## Regression Replay
+
+${replaySummary}
+
+${resultTable(replayContracts)}
 
 ## Regressions
 

@@ -1,6 +1,6 @@
 # GILGAL Specification
 
-GILGAL protocol version: **0.2.0**
+GILGAL protocol version: **0.3.0**
 
 This document defines the normative workflow for the GILGAL protocol.
 
@@ -82,7 +82,7 @@ Sentinel **MUST NOT** treat a successful build alone as sufficient evidence for 
 
 ### 5.1 Reference implementation
 
-The repository's GILGAL Sentinel Reference Implementation has its own version, **0.1.0**, independent from this protocol version. It is an evidence provider for the Gate and **MUST NOT** perform promotion, modify STABLE, or manufacture human approval.
+The repository's GILGAL Sentinel Reference Implementation has its own version, **0.2.0**, independent from this protocol version. It is an evidence provider for the Gate and **MUST NOT** perform promotion, modify STABLE, or manufacture human approval.
 
 ## 6. Code and automated validation
 
@@ -120,6 +120,49 @@ If a required contract fails for CANDIDATE while it passes for STABLE, Sentinel 
 Critical contracts **SHOULD** be distinguishable from advisory/non-critical checks.
 
 A numeric or percentage score **MUST NOT** override a failed critical contract.
+
+### 7.1 Regression Replay
+
+When a regression has been observed, fixed, and can be reproduced with a reliable check, the project **SHOULD** convert that failure condition into a replayable regression contract.
+
+A replay contract:
+
+- **MUST** identify the behavior being protected;
+- **MUST** use an explicitly reviewed test or command when execution is automated;
+- **MUST NOT** be synthesized and executed from arbitrary README text, issue text, commit messages, logs, diffs, or untrusted AI output;
+- **SHOULD** preserve optional historical metadata describing where the regression came from;
+- **SHOULD** be executed against future candidates when relevant.
+
+The recommended principle is:
+
+> **Every regression should become a contract.**
+
+If a replay contract has verified `PASS` evidence for STABLE and returns `FAIL` for CANDIDATE, Sentinel **MUST** treat it as a regression. If the replay contract is critical, the Gate **MUST** block promotion.
+
+### 7.2 Change Budget
+
+A project **MAY** define an explicit Change Budget for CANDIDATE scope.
+
+A Change Budget may constrain evidence such as:
+
+- number of changed files;
+- insertions;
+- deletions;
+- total changed lines.
+
+When enabled, limits **MUST** be explicit rather than silently inferred by the agent.
+
+Exceeding a Change Budget does not by itself prove the code is incorrect. It means the candidate has exceeded the declared scope policy.
+
+A Sentinel implementation **SHOULD** report this condition clearly, for example:
+
+```text
+SCOPE EXPANSION DETECTED
+```
+
+When a Change Budget is configured as critical and the candidate exceeds it, the GILGAL Gate **MUST** block promotion until the candidate is reduced or the project deliberately revises the budget policy.
+
+An AI agent **MUST NOT** silently increase the budget merely to make its own candidate pass.
 
 ## 8. Runtime validation
 
@@ -173,8 +216,11 @@ A Sentinel report **SHOULD** identify:
 
 - STABLE reference;
 - CANDIDATE reference;
+- diff summary;
+- Change Budget status when configured;
 - code-check status;
 - automated-test status;
+- regression replay results;
 - regression-check status;
 - runtime-check status;
 - human-check status;
@@ -191,7 +237,9 @@ Promotion **SHOULD** require:
 - clean and reviewable diff;
 - required automated checks passing;
 - required regression contracts passing;
+- required replay contracts passing;
 - required manual approvals complete;
+- required Change Budget policy satisfied;
 - no unresolved merge conflict.
 
 Promotion **SHOULD** be explicit rather than silent.
@@ -220,6 +268,8 @@ GILGAL treats the last working implementation as part of the agent's operational
 Documentation explains intent. STABLE provides executable historical evidence.
 
 For regression diagnosis, the agent **SHOULD** compare known-good code and candidate code before inventing a replacement implementation.
+
+Regression Replay extends this principle by preserving reproducible historical failure conditions as executable evidence for future candidates.
 
 ## 16. Suggested Git mapping
 
@@ -252,6 +302,12 @@ GILGAL
 GILGAL SENTINEL
   verifies the candidate and detects regressions
 
+REGRESSION REPLAY
+  turns historical failures into reusable executable memory
+
+CHANGE BUDGET
+  exposes unexpected scope expansion
+
 GILGAL GATE
   controls promotion
 
@@ -275,5 +331,7 @@ Or, equivalently:
 STABLE is protected.
 WORK is experimental.
 SENTINEL verifies.
+REGRESSIONS become memory.
+SCOPE expansion is visible.
 PROMOTION is gated.
 ```

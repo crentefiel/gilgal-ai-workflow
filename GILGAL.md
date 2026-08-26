@@ -44,10 +44,13 @@ IA altera somente WORK
   ↓
 diff
   ↓
+Change Budget
+  ↓
 GILGAL SENTINEL
   ├── code checks
   ├── testes automatizados
   ├── comparação STABLE x CANDIDATE
+  ├── Regression Replay
   ├── detecção de regressão
   ├── runtime/logs
   └── validações humanas quando necessárias
@@ -82,7 +85,56 @@ O Sentinel é agnóstico de ferramenta. Ele pode consumir resultados de TestSpri
 
 Se um contrato crítico passa no STABLE e falha no CANDIDATE, o Sentinel deve reportar regressão e o GILGAL Gate deve bloquear a promoção.
 
-Este repositório contém a **GILGAL Sentinel Reference Implementation 0.1.0**, um motor local em Node.js/TypeScript. A versão `0.1.0` identifica a implementação, enquanto `0.2.0` continua identificando a versão atual do protocolo GILGAL. O motor observa, testa e reporta; não promove código e não modifica STABLE.
+Este repositório contém a **GILGAL Sentinel Reference Implementation 0.2.0**, um motor local em Node.js/TypeScript. A versão da implementação é independente da versão do protocolo GILGAL. O motor observa, testa e reporta; não promove código e não modifica STABLE.
+
+## Regression Replay
+
+A versão conceitual 0.3.0 adiciona a ideia de **Regression Replay**.
+
+Quando um bug real é encontrado, corrigido e pode ser reproduzido por um teste confiável, esse erro deve deixar uma proteção permanente.
+
+Regra recomendada:
+
+> **Every regression should become a contract.**
+
+Fluxo:
+
+```text
+regressão encontrada
+  ↓
+causa corrigida
+  ↓
+correção comprovada
+  ↓
+condição antiga vira contrato replay
+  ↓
+novos CANDIDATES repetem esse teste
+```
+
+Assim, o projeto não guarda somente a memória de como funcionava. Ele também guarda memória executável de como já quebrou.
+
+O Sentinel de referência 0.2.0 implementa isso com contratos `type: "replay"`.
+
+## Change Budget
+
+A versão conceitual 0.3.0 também adiciona **Change Budget**.
+
+A ideia é dar à tarefa um limite explícito de escopo. Por exemplo, uma correção pequena pode esperar poucas alterações. Se o candidato cresce muito além do limite configurado, o Sentinel pode emitir:
+
+```text
+SCOPE EXPANSION DETECTED
+```
+
+O orçamento pode observar:
+
+- quantidade de arquivos alterados;
+- linhas adicionadas;
+- linhas removidas;
+- total de linhas modificadas.
+
+Change Budget não afirma que mudanças grandes são erradas. Ele impede que uma expansão inesperada de escopo passe silenciosamente como se fosse uma pequena correção.
+
+Quando configurado como crítico, exceder o orçamento bloqueia o Gate até que a mudança seja reduzida ou a política seja conscientemente revisada.
 
 ## Memória executável
 
@@ -100,6 +152,16 @@ BROKEN CANDIDATE
 
 Assim, a versão funcional anterior passa a fazer parte da memória operacional do agente.
 
+Com Regression Replay, a memória operacional ganha uma segunda camada:
+
+```text
+como funcionava
++
+como já quebrou
++
+como provar que o erro não voltou
+```
+
 ## Princípios
 
 1. Proteger sempre o último estado comprovadamente bom.
@@ -113,7 +175,9 @@ Assim, a versão funcional anterior passa a fazer parte da memória operacional 
 9. O código estável anterior é uma fonte de verdade histórica.
 10. O Sentinel deve comparar contratos comprovados entre STABLE e CANDIDATE.
 11. Uma pontuação alta nunca pode esconder a falha de um contrato crítico.
-12. O sistema deve ser simples, auditável e reversível.
+12. Regressões reproduzíveis devem se tornar contratos replay sempre que possível.
+13. Expansão inesperada de escopo deve ser visível antes da promoção.
+14. O sistema deve ser simples, auditável e reversível.
 
 ## Ecossistema GILGAL
 
@@ -123,6 +187,12 @@ protege o último código comprovadamente bom
 
 GILGAL SENTINEL
 verifica o candidato e procura erros/regressões
+
+REGRESSION REPLAY
+repete falhas históricas para impedir que retornem
+
+CHANGE BUDGET
+expõe alterações maiores do que o escopo esperado
 
 GILGAL GATE
 controla se a promoção pode acontecer
@@ -159,10 +229,14 @@ recebimento automático de arquivo = FAIL
 GILGAL SENTINEL:
 REGRESSION DETECTED
 
-GILGAL GATE:
-PROMOTION BLOCKED
+Depois da correção:
+regressão vira REPLAY CONTRACT
 
-STABLE continua disponível
+Próximo CANDIDATE:
+replay executa novamente
+
+GILGAL GATE:
+PASS somente se o erro antigo não voltou
 ```
 
 ## O que o GILGAL tenta evitar
@@ -186,7 +260,9 @@ corrigir bug A em WORK
 ↓
 comparar com STABLE
 ↓
-Sentinel valida contratos
+verificar Change Budget
+↓
+Sentinel valida contratos e replays
 ↓
 se B quebrar, bloquear promoção
 ```

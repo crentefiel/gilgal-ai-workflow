@@ -14,11 +14,13 @@ export function renderStatus(evidence: GitEvidence, report?: SentinelReport): st
     lines.push('', 'Last result: NOT TESTED', 'Gate: BLOCKED', 'Reason: No Sentinel report has been recorded.');
     return `${lines.join('\n')}\n`;
   }
+  const replay = report.contracts.filter((item) => item.type === 'replay');
   lines.push(
     '',
     `Changed files: ${report.diff.changedFiles.length}`,
     `Automated checks: PASS ${report.checks.filter((item) => item.status === 'PASS').length}, FAIL ${report.checks.filter((item) => item.status === 'FAIL').length}, PENDING ${report.checks.filter((item) => item.status === 'PENDING').length}, ERROR ${report.checks.filter((item) => item.status === 'ERROR').length}`,
     `Contracts: PASS ${report.contracts.filter((item) => item.status === 'PASS').length}, FAIL ${report.contracts.filter((item) => item.status === 'FAIL').length}, PENDING ${report.contracts.filter((item) => item.status === 'PENDING').length}, ERROR ${report.contracts.filter((item) => item.status === 'ERROR').length}`,
+    `Regression replay: PASS ${replay.filter((item) => item.status === 'PASS').length}, FAIL ${replay.filter((item) => item.status === 'FAIL').length}, PENDING ${replay.filter((item) => item.status === 'PENDING').length}, ERROR ${replay.filter((item) => item.status === 'ERROR').length}`,
     `Regressions: ${report.regressions.length}`,
     `Last result: ${report.gate.outcome}`,
     `Gate: ${report.gate.status}`,

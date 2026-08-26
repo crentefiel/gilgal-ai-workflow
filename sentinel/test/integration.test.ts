@@ -43,7 +43,7 @@ test('full check writes JSON/Markdown reports and returns READY', async () => {
     );
     const loaded = await loadConfig('gilgal.sentinel.json', directory);
     const { report, written } = await runSentinelCheck(loaded.config, loaded.projectRoot);
-    assert.equal(report.sentinelVersion, '0.1.0');
+    assert.equal(report.sentinelVersion, '0.2.0');
     assert.equal(report.gate.status, 'READY');
     assert.equal(report.gate.exitCode, 0);
     assert.deepEqual(report.checks.map((item) => [item.id, item.status]), [
@@ -53,6 +53,7 @@ test('full check writes JSON/Markdown reports and returns READY', async () => {
     ]);
     assert.equal(report.contracts[0]?.status, 'PASS');
     assert.equal(report.contracts[0]?.stableResult, 'PASS');
+    assert.equal(report.regressionReplay.total, 0);
     assert.ok(written.json);
     assert.ok(written.markdown);
     await access(written.json!);
@@ -80,6 +81,32 @@ test('STABLE PASS and CANDIDATE FAIL is a blocking regression', async () => {
     assert.equal(report.regressions.length, 1);
     assert.equal(report.gate.status, 'BLOCKED');
     assert.equal(report.gate.exitCode, 1);
+  } finally {
+    await removeProject(directory);
+  }
+});
+
+test('regression replay executes a remembered bug check and blocks if it returns', async () => {
+  const directory = await createGitProject();
+  try {
+    await configureCandidate(directory, [{
+      id: 'qr-state-regression',
+      name: 'QR state leaves waiting screen after authentication',
+      critical: true,
+      type: 'replay',
+      origin: 'A previously fixed QR/authentication regression',
+      description: 'Every known regression should become a replayable contract.',
+      command: nodeCommand('process.exit(1)'),
+    }]);
+    const loaded = await loadConfig('gilgal.sentinel.json', directory);
+    const { report } = await runSentinelCheck(loaded.config, loaded.projectRoot);
+    assert.equal(report.contracts[0]?.type, 'replay');
+    assert.equal(report.contracts[0]?.replayOrigin, 'A previously fixed QR/authentication regression');
+    assert.equal(report.contracts[0]?.candidateResult, 'FAIL');
+    assert.equal(report.regressionReplay.total, 1);
+    assert.equal(report.regressionReplay.fail, 1);
+    assert.equal(report.regressions.length, 1);
+    assert.equal(report.gate.status, 'BLOCKED');
   } finally {
     await removeProject(directory);
   }

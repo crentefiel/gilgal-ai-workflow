@@ -8,7 +8,7 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 **Concept documented by:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **First public specification:** 2026-08-25  
-**Current concept version:** 0.2.0
+**Current concept version:** 0.3.0
 
 ---
 
@@ -16,10 +16,12 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 O **GILGAL** é um protocolo de trabalho para agentes de IA que programam software.
 
-A ideia central é simples: manter **dois ambientes separados**.
+A ideia central é manter o último estado comprovadamente bom protegido enquanto a IA trabalha em um candidato isolado.
 
 - **STABLE** — última versão comprovadamente funcional.
-- **WORK** — ambiente onde a IA pode editar, experimentar e corrigir.
+- **WORK / CANDIDATE** — ambiente onde a IA pode editar, experimentar e corrigir.
+- **SENTINEL** — reúne evidências, executa verificações e procura regressões.
+- **GATE** — bloqueia promoção quando os requisitos não foram comprovados.
 
 A IA nunca deve usar STABLE como laboratório.
 
@@ -33,10 +35,10 @@ WORK
   │
   ├── alterações
   ├── diff
-  ├── typecheck
-  ├── testes
-  ├── build
-  ├── contratos de regressão
+  ├── Change Budget
+  ├── typecheck / testes / build
+  ├── contratos
+  ├── Regression Replay
   └── testes humanos quando necessários
   │
   ▼
@@ -45,8 +47,8 @@ GILGAL SENTINEL
   ├── verifica código
   ├── executa/consome testes
   ├── compara STABLE x CANDIDATE
-  ├── procura regressões
-  ├── analisa runtime/logs
+  ├── repete regressões conhecidas
+  ├── detecta expansão de escopo
   └── exige validação humana quando necessário
   │
   ▼
@@ -61,7 +63,23 @@ Se a tentativa falhar, a versão funcional anterior continua preservada e pode s
 
 O GILGAL não tenta substituir Git, branches, worktrees, CI ou ferramentas de teste. Ele organiza esses mecanismos em um protocolo específico para agentes de IA.
 
-O **GILGAL SENTINEL** é a camada de verificação. Ele não pergunta apenas se o código novo compila; ele pergunta se o candidato continua preservando os comportamentos que já eram comprovados no STABLE.
+### Regression Replay
+
+A partir da evolução 0.3.0, o GILGAL recomenda transformar bugs já encontrados e corrigidos em contratos reproduzíveis.
+
+> **Every regression should become a contract.**
+
+Assim, um erro antigo deixa de ser apenas história e passa a ser um teste que futuros candidatos precisam enfrentar novamente.
+
+### Change Budget
+
+O GILGAL também pode impor um orçamento explícito de mudança. Uma tarefa pequena que altera arquivos ou linhas demais pode gerar:
+
+```text
+SCOPE EXPANSION DETECTED
+```
+
+Isso não significa automaticamente que uma mudança grande está errada. Significa que uma expansão inesperada de escopo precisa ser revisada antes de substituir STABLE.
 
 ---
 
@@ -69,14 +87,15 @@ O **GILGAL SENTINEL** é a camada de verificação. Ele não pergunta apenas se 
 
 **GILGAL** is a guarded development protocol for AI coding agents.
 
-Its central idea is to keep the last verified version physically/logically protected while the AI works in an isolated candidate environment.
+Its central idea is to keep the last verified version protected while the AI works in an isolated candidate environment.
 
 ```mermaid
 flowchart TD
     S[STABLE<br/>Last known-good state] --> W[WORK / CANDIDATE<br/>AI edits here]
-    W --> N[GILGAL SENTINEL<br/>verification layer]
+    W --> B[Change Budget<br/>scope expansion check]
+    B --> N[GILGAL SENTINEL<br/>verification layer]
     N --> D[Code checks + automated tests]
-    D --> R[STABLE vs CANDIDATE regression contracts]
+    D --> R[Regression contracts + Regression Replay]
     R --> H{Human-only checks required?}
     H -->|Yes| M[Manual validation]
     H -->|No| G{GILGAL Gate}
@@ -101,13 +120,15 @@ into:
 
 ## GILGAL Sentinel
 
-**GILGAL SENTINEL** is the verification layer introduced in 0.2.0.
+**GILGAL SENTINEL** is the verification layer introduced in protocol 0.2.0.
 
 It may combine:
 
 - code/type/static checks;
 - automated tests;
 - STABLE vs CANDIDATE regression comparison;
+- Regression Replay for previously fixed bugs;
+- Change Budget evidence for scope expansion;
 - runtime/log analysis;
 - human-only validation gates.
 
@@ -117,9 +138,38 @@ A critical contract failing in CANDIDATE while passing in STABLE must block prom
 
 ### Reference implementation
 
-This repository now includes **GILGAL Sentinel Reference Implementation 0.1.0** in [`sentinel/`](sentinel/README.md). Its implementation version is independent from the GILGAL protocol version.
+This repository includes **GILGAL Sentinel Reference Implementation 0.2.0** in [`sentinel/`](sentinel/README.md). Its implementation version is independent from the GILGAL protocol version.
 
-The local TypeScript CLI resolves STABLE/CANDIDATE Git evidence, runs configured checks, evaluates `command` and human-approved `manual` contracts, compares exact-SHA baselines, writes JSON/Markdown reports, and returns CI-compatible gate exit codes. It never promotes code or mutates STABLE.
+The local TypeScript CLI resolves STABLE/CANDIDATE Git evidence, runs configured checks, evaluates `command`, `manual`, and `replay` contracts, compares exact-SHA baselines, enforces an optional Change Budget, writes JSON/Markdown reports, and returns CI-compatible gate exit codes. It never promotes code or mutates STABLE.
+
+## Regression Replay
+
+A previously fixed regression can be encoded as a replay contract and run on every future candidate.
+
+```text
+bug discovered
+    ↓
+fix verified
+    ↓
+replay contract recorded
+    ↓
+future candidate
+    ↓
+old failure condition replayed
+```
+
+If STABLE records `PASS` and CANDIDATE returns `FAIL`, Sentinel reports a regression and blocks the Gate when that replay is critical.
+
+## Change Budget
+
+A project may configure explicit limits for candidate scope, such as:
+
+- changed files;
+- insertions;
+- deletions;
+- total changed lines.
+
+When a critical budget is exceeded, Sentinel reports `SCOPE EXPANSION DETECTED` and blocks promotion until the change is reduced or the policy is deliberately revised.
 
 ## Core principles
 
@@ -132,6 +182,8 @@ The local TypeScript CLI resolves STABLE/CANDIDATE Git evidence, runs configured
 7. **Promotion is explicit and gated.**
 8. **Failed candidates may be preserved for diagnosis instead of overwriting history.**
 9. **Sentinel compares verified STABLE behavior against CANDIDATE behavior.**
+10. **Previously fixed regressions should become replayable contracts when reproducible.**
+11. **Unexpected scope expansion should be made visible before promotion.**
 
 ## Suggested implementation
 
@@ -141,6 +193,8 @@ A practical implementation can use:
 - Git worktrees
 - automated typecheck/tests/build
 - regression contracts
+- Regression Replay
+- Change Budget
 - CI checks
 - manual approval gates
 - tags or commits for rollback points
@@ -197,7 +251,7 @@ KNOWN-GOOD STABLE
 BROKEN CANDIDATE
 ```
 
-That makes the working code itself part of the project's memory.
+Regression Replay adds another layer: the failure itself can become executable historical memory.
 
 ## Documents
 
@@ -205,13 +259,13 @@ That makes the working code itself part of the project's memory.
 - [SENTINEL.md](SENTINEL.md) — verification and regression-detection layer
 - [SPECIFICATION.md](SPECIFICATION.md) — normative workflow and state transitions
 - [CHANGELOG.md](CHANGELOG.md) — concept history
-- [sentinel/README.md](sentinel/README.md) — Sentinel 0.1.0 installation, CLI, configuration and security
+- [sentinel/README.md](sentinel/README.md) — Sentinel 0.2.0 installation, CLI, configuration and security
 
 ## Scope and prior art note
 
 Git branches, worktrees, CI, staging environments, rollback strategies, promotion gates and automated testing are established software-engineering mechanisms.
 
-**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, and human-only validation for real-world tests.**
+**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, human-only validation, Regression Replay, and explicit change-scope budgeting.**
 
 This repository documents the concept and its evolution. It does not make a claim of patent status or worldwide novelty.
 
@@ -219,6 +273,6 @@ This repository documents the concept and its evolution. It does not make a clai
 
 ## Status
 
-**GILGAL protocol 0.2.0 + GILGAL Sentinel reference implementation 0.1.0.**
+**GILGAL protocol 0.3.0 + GILGAL Sentinel reference implementation 0.2.0.**
 
 Feedback, experiments and reference implementations are welcome.

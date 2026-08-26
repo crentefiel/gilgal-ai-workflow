@@ -15,6 +15,57 @@ test('loads a valid configuration and applies defaults', async () => {
     assert.equal(loaded.config.version, 1);
     assert.equal(loaded.config.defaults.outputLimitBytes, 50 * 1024);
     assert.equal(loaded.config.git.requireStableAncestor, true);
+    assert.equal(loaded.config.changeBudget.enabled, false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('loads an enabled change budget, allows zero-tolerance limits, and rejects invalid budgets', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'sentinel-config-'));
+  try {
+    await writeJson(directory, 'budget.json', {
+      ...basicConfig(),
+      changeBudget: {
+        enabled: true,
+        critical: true,
+        maxFiles: 8,
+        maxChangedLines: 500,
+      },
+    });
+    const loaded = await loadConfig('budget.json', directory);
+    assert.equal(loaded.config.changeBudget.enabled, true);
+    assert.equal(loaded.config.changeBudget.maxFiles, 8);
+    assert.equal(loaded.config.changeBudget.maxChangedLines, 500);
+
+    await writeJson(directory, 'zero-budget.json', {
+      ...basicConfig(),
+      changeBudget: {
+        enabled: true,
+        critical: true,
+        maxFiles: 0,
+        maxInsertions: 0,
+        maxDeletions: 0,
+        maxChangedLines: 0,
+      },
+    });
+    const zeroBudget = await loadConfig('zero-budget.json', directory);
+    assert.equal(zeroBudget.config.changeBudget.maxFiles, 0);
+    assert.equal(zeroBudget.config.changeBudget.maxInsertions, 0);
+    assert.equal(zeroBudget.config.changeBudget.maxDeletions, 0);
+    assert.equal(zeroBudget.config.changeBudget.maxChangedLines, 0);
+
+    await writeJson(directory, 'bad-budget.json', {
+      ...basicConfig(),
+      changeBudget: { enabled: true },
+    });
+    await assert.rejects(() => loadConfig('bad-budget.json', directory), /at least one limit/);
+
+    await writeJson(directory, 'negative-budget.json', {
+      ...basicConfig(),
+      changeBudget: { enabled: true, maxDeletions: -1 },
+    });
+    await assert.rejects(() => loadConfig('negative-budget.json', directory), /non-negative integer/);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

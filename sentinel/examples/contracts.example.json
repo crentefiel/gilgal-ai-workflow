@@ -9,6 +9,15 @@
       "command": "npm run test:login"
     },
     {
+      "id": "qr-auth-regression",
+      "name": "QR authentication leaves waiting screen",
+      "critical": true,
+      "type": "replay",
+      "origin": "Regression fixed after the UI remained on the QR screen after authentication",
+      "description": "A previously fixed regression is replayed on every candidate.",
+      "command": "npm run test:qr-auth-regression"
+    },
+    {
       "id": "physical-device",
       "name": "Physical device validation",
       "critical": true,

@@ -42,18 +42,27 @@ function manualResult(
   };
 }
 
-function commandResult(contract: Contract & { type: 'command' }, result: CheckResult, baseline: BaselineDocument): ContractResult {
+function executableResult(
+  contract: Exclude<Contract, { type: 'manual' }>,
+  result: CheckResult,
+  baseline: BaselineDocument,
+): ContractResult {
   const stableResult = baseline.contracts[contract.id] ?? 'NOT_RECORDED';
-  return {
+  const output: ContractResult = {
     ...result,
     id: contract.id,
     name: contract.name,
-    type: 'command',
+    type: contract.type,
     critical: contract.critical,
     candidateResult: result.status,
     stableResult,
     regression: stableResult === 'PASS' && result.status === 'FAIL',
   };
+  if (contract.type === 'replay') {
+    if (contract.origin !== undefined) output.replayOrigin = contract.origin;
+    if (contract.description !== undefined) output.replayDescription = contract.description;
+  }
+  return output;
 }
 
 export async function runContracts(
@@ -90,7 +99,7 @@ export async function runContracts(
         ...(signal ? { signal } : {}),
       },
     );
-    results.push(commandResult(contract, check, baseline));
+    results.push(executableResult(contract, check, baseline));
   }
   return results;
 }

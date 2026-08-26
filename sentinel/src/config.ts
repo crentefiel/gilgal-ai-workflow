@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ConfigurationError } from './errors.js';
-import type { CommandCheckConfig, SentinelConfig } from './types.js';
+import type { ChangeBudgetConfig, CommandCheckConfig, SentinelConfig } from './types.js';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_OUTPUT_LIMIT_BYTES = 50 * 1024;
@@ -38,6 +38,15 @@ function optionalPositiveInteger(parent: UnknownRecord, key: string, fallback: n
   return value as number;
 }
 
+function optionalNonNegativeInteger(parent: UnknownRecord, key: string, fallback: number): number {
+  const value = parent[key];
+  if (value === undefined) return fallback;
+  if (!Number.isInteger(value) || (value as number) < 0) {
+    throw new ConfigurationError(`${key} must be a non-negative integer.`);
+  }
+  return value as number;
+}
+
 function parseChecks(value: unknown): Record<string, CommandCheckConfig> {
   if (!isRecord(value)) {
     throw new ConfigurationError('checks must be an object.');
@@ -70,6 +79,35 @@ function parseChecks(value: unknown): Record<string, CommandCheckConfig> {
     checks[id] = parsed;
   }
   return checks;
+}
+
+function parseChangeBudget(value: unknown): ChangeBudgetConfig {
+  if (value === undefined) {
+    return { enabled: false, critical: true };
+  }
+  if (!isRecord(value)) {
+    throw new ConfigurationError('changeBudget must be an object.');
+  }
+
+  const budget: ChangeBudgetConfig = {
+    enabled: optionalBoolean(value, 'enabled', false),
+    critical: optionalBoolean(value, 'critical', true),
+  };
+  if (value.maxFiles !== undefined) budget.maxFiles = optionalNonNegativeInteger(value, 'maxFiles', 0);
+  if (value.maxInsertions !== undefined) budget.maxInsertions = optionalNonNegativeInteger(value, 'maxInsertions', 0);
+  if (value.maxDeletions !== undefined) budget.maxDeletions = optionalNonNegativeInteger(value, 'maxDeletions', 0);
+  if (value.maxChangedLines !== undefined) budget.maxChangedLines = optionalNonNegativeInteger(value, 'maxChangedLines', 0);
+
+  if (
+    budget.enabled
+    && budget.maxFiles === undefined
+    && budget.maxInsertions === undefined
+    && budget.maxDeletions === undefined
+    && budget.maxChangedLines === undefined
+  ) {
+    throw new ConfigurationError('changeBudget requires at least one limit when enabled.');
+  }
+  return budget;
 }
 
 export function resolveProjectPath(projectRoot: string, configuredPath: string, label: string): string {
@@ -142,6 +180,7 @@ export async function loadConfig(configPath = 'gilgal.sentinel.json', cwd = proc
       stable: { ref: requiredString(raw.stable, 'ref', 'stable') },
       candidate: { ref: requiredString(raw.candidate, 'ref', 'candidate') },
       checks: parseChecks(raw.checks ?? {}),
+      changeBudget: parseChangeBudget(raw.changeBudget),
       contractsFile,
       reports: {
         directory: reportsDirectory,

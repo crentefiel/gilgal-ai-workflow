@@ -1,12 +1,40 @@
 import { readFile } from 'node:fs/promises';
 import { ConfigurationError } from '../errors.js';
 import { resolveProjectPath } from '../config.js';
-import type { Contract, ContractsDocument } from '../types.js';
+import type { CommandContract, Contract, ContractsDocument, ReplayContract } from '../types.js';
 
 type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function optionalText(raw: UnknownRecord, key: string, context: string): string | undefined {
+  const value = raw[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new ConfigurationError(`${context}.${key} must be a non-empty string when provided.`);
+  }
+  return value;
+}
+
+function applyCommandLimits(
+  contract: CommandContract | ReplayContract,
+  raw: UnknownRecord,
+  index: number,
+): void {
+  if (raw.timeoutMs !== undefined) {
+    if (!Number.isInteger(raw.timeoutMs) || (raw.timeoutMs as number) <= 0) {
+      throw new ConfigurationError(`contracts[${index}].timeoutMs must be a positive integer.`);
+    }
+    contract.timeoutMs = raw.timeoutMs as number;
+  }
+  if (raw.outputLimitBytes !== undefined) {
+    if (!Number.isInteger(raw.outputLimitBytes) || (raw.outputLimitBytes as number) <= 0) {
+      throw new ConfigurationError(`contracts[${index}].outputLimitBytes must be a positive integer.`);
+    }
+    contract.outputLimitBytes = raw.outputLimitBytes as number;
+  }
 }
 
 export async function loadContracts(projectRoot: string, contractsFile: string): Promise<ContractsDocument> {
@@ -33,8 +61,8 @@ export async function loadContracts(projectRoot: string, contractsFile: string):
     if (typeof name !== 'string' || name.trim() === '') {
       throw new ConfigurationError(`contracts[${index}].name is required.`);
     }
-    if (type !== 'command' && type !== 'manual') {
-      throw new ConfigurationError(`contracts[${index}].type must be command or manual.`);
+    if (type !== 'command' && type !== 'manual' && type !== 'replay') {
+      throw new ConfigurationError(`contracts[${index}].type must be command, manual, or replay.`);
     }
     if (raw.critical !== undefined && typeof raw.critical !== 'boolean') {
       throw new ConfigurationError(`contracts[${index}].critical must be a boolean.`);
@@ -44,19 +72,19 @@ export async function loadContracts(projectRoot: string, contractsFile: string):
     if (typeof raw.command !== 'string' || raw.command.trim() === '') {
       throw new ConfigurationError(`contracts[${index}].command is required.`);
     }
-    const contract: Contract = { id, name, type, critical, command: raw.command };
-    if (raw.timeoutMs !== undefined) {
-      if (!Number.isInteger(raw.timeoutMs) || (raw.timeoutMs as number) <= 0) {
-        throw new ConfigurationError(`contracts[${index}].timeoutMs must be a positive integer.`);
-      }
-      contract.timeoutMs = raw.timeoutMs as number;
+
+    if (type === 'replay') {
+      const contract: ReplayContract = { id, name, type, critical, command: raw.command };
+      applyCommandLimits(contract, raw, index);
+      const origin = optionalText(raw, 'origin', `contracts[${index}]`);
+      const description = optionalText(raw, 'description', `contracts[${index}]`);
+      if (origin !== undefined) contract.origin = origin;
+      if (description !== undefined) contract.description = description;
+      return contract;
     }
-    if (raw.outputLimitBytes !== undefined) {
-      if (!Number.isInteger(raw.outputLimitBytes) || (raw.outputLimitBytes as number) <= 0) {
-        throw new ConfigurationError(`contracts[${index}].outputLimitBytes must be a positive integer.`);
-      }
-      contract.outputLimitBytes = raw.outputLimitBytes as number;
-    }
+
+    const contract: CommandContract = { id, name, type, critical, command: raw.command };
+    applyCommandLimits(contract, raw, index);
     return contract;
   });
   return { version: 1, contracts };

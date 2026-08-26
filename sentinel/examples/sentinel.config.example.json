@@ -24,6 +24,14 @@
       "command": "npm run build"
     }
   },
+  "changeBudget": {
+    "enabled": true,
+    "critical": true,
+    "maxFiles": 12,
+    "maxInsertions": 1200,
+    "maxDeletions": 600,
+    "maxChangedLines": 1500
+  },
   "contractsFile": "gilgal.contracts.json",
   "reports": {
     "directory": ".gilgal/reports",
