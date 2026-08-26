@@ -23,6 +23,14 @@
       "command": "npm --prefix sentinel run build"
     }
   },
+  "changeBudget": {
+    "enabled": true,
+    "critical": true,
+    "maxFiles": 50,
+    "maxInsertions": 6000,
+    "maxDeletions": 3000,
+    "maxChangedLines": 8000
+  },
   "contractsFile": "gilgal.contracts.json",
   "reports": {
     "directory": ".gilgal/reports",
