@@ -18,6 +18,25 @@ function optionalText(raw: UnknownRecord, key: string, context: string): string 
   return value;
 }
 
+function applyCommandLimits(
+  contract: CommandContract | ReplayContract,
+  raw: UnknownRecord,
+  index: number,
+): void {
+  if (raw.timeoutMs !== undefined) {
+    if (!Number.isInteger(raw.timeoutMs) || (raw.timeoutMs as number) <= 0) {
+      throw new ConfigurationError(`contracts[${index}].timeoutMs must be a positive integer.`);
+    }
+    contract.timeoutMs = raw.timeoutMs as number;
+  }
+  if (raw.outputLimitBytes !== undefined) {
+    if (!Number.isInteger(raw.outputLimitBytes) || (raw.outputLimitBytes as number) <= 0) {
+      throw new ConfigurationError(`contracts[${index}].outputLimitBytes must be a positive integer.`);
+    }
+    contract.outputLimitBytes = raw.outputLimitBytes as number;
+  }
+}
+
 export async function loadContracts(projectRoot: string, contractsFile: string): Promise<ContractsDocument> {
   const absolutePath = resolveProjectPath(projectRoot, contractsFile, 'contractsFile');
   let document: unknown;
@@ -54,28 +73,18 @@ export async function loadContracts(projectRoot: string, contractsFile: string):
       throw new ConfigurationError(`contracts[${index}].command is required.`);
     }
 
-    const contract: CommandContract | ReplayContract = type === 'replay'
-      ? { id, name, type, critical, command: raw.command }
-      : { id, name, type, critical, command: raw.command };
-
-    if (raw.timeoutMs !== undefined) {
-      if (!Number.isInteger(raw.timeoutMs) || (raw.timeoutMs as number) <= 0) {
-        throw new ConfigurationError(`contracts[${index}].timeoutMs must be a positive integer.`);
-      }
-      contract.timeoutMs = raw.timeoutMs as number;
-    }
-    if (raw.outputLimitBytes !== undefined) {
-      if (!Number.isInteger(raw.outputLimitBytes) || (raw.outputLimitBytes as number) <= 0) {
-        throw new ConfigurationError(`contracts[${index}].outputLimitBytes must be a positive integer.`);
-      }
-      contract.outputLimitBytes = raw.outputLimitBytes as number;
-    }
     if (type === 'replay') {
+      const contract: ReplayContract = { id, name, type, critical, command: raw.command };
+      applyCommandLimits(contract, raw, index);
       const origin = optionalText(raw, 'origin', `contracts[${index}]`);
       const description = optionalText(raw, 'description', `contracts[${index}]`);
       if (origin !== undefined) contract.origin = origin;
       if (description !== undefined) contract.description = description;
+      return contract;
     }
+
+    const contract: CommandContract = { id, name, type, critical, command: raw.command };
+    applyCommandLimits(contract, raw, index);
     return contract;
   });
   return { version: 1, contracts };
