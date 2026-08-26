@@ -21,6 +21,12 @@ export function renderMarkdownReport(report: SentinelReport): string {
     : report.regressions
       .map((item) => `- ${item.contractId}: ${item.stableResult} → ${item.candidateResult}${item.critical ? ' (critical)' : ''}`)
       .join('\n');
+  const regularContracts = report.contracts.filter((item) => item.type !== 'replay');
+  const replayContracts = report.contracts.filter((item) => item.type === 'replay');
+  const replaySummary = report.regressionReplay.total === 0
+    ? 'No replay contracts configured.'
+    : `${report.regressionReplay.pass} PASS / ${report.regressionReplay.fail} FAIL / ${report.regressionReplay.pending} PENDING / ${report.regressionReplay.error} ERROR / ${report.regressionReplay.skipped} SKIPPED`;
+
   return `# GILGAL SENTINEL REPORT
 
 Sentinel implementation: **${report.sentinelVersion}**
@@ -44,7 +50,13 @@ ${resultTable(report.checks)}
 
 ## Contracts
 
-${resultTable(report.contracts)}
+${resultTable(regularContracts)}
+
+## Regression Replay
+
+${replaySummary}
+
+${resultTable(replayContracts)}
 
 ## Regressions
 
