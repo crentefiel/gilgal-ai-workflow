@@ -16,7 +16,7 @@ A regra central é:
 
 > **Nunca destruir a última versão boa enquanto tenta criar a próxima.**
 
-A partir da versão conceitual **0.4.0**, o GILGAL também protege o processo de investigação contra repetição silenciosa de hipóteses já rejeitadas.
+A partir da versão conceitual **0.4.0**, o GILGAL também protege o processo de investigação contra repetição silenciosa de hipóteses já rejeitadas. A versão conceitual **0.5.0** formaliza **Proof Ceiling / Evidence Sufficiency** e **Artifact / Render Integrity**.
 
 ## Modelo de estados
 
@@ -93,7 +93,7 @@ Se um contrato crítico passa no STABLE e falha no CANDIDATE, o Sentinel deve re
 
 Este repositório contém a **GILGAL Sentinel Reference Implementation 0.2.0**, um motor local em Node.js/TypeScript. A versão da implementação é independente da versão do protocolo GILGAL. O motor observa, testa e reporta; não promove código e não modifica STABLE.
 
-A implementação de referência 0.2.0 ainda não aplica automaticamente todas as regras de Failure Memory introduzidas no protocolo 0.4.0; essas regras já são normativas no protocolo e podem ser aplicadas manualmente ou por implementações futuras do Sentinel.
+A implementação de referência 0.2.0 ainda não aplica automaticamente todas as regras de Failure Memory introduzidas no protocolo 0.4.0 nem todas as regras de Evidence Sufficiency / Artifact Integrity introduzidas no protocolo 0.5.0; essas regras já são normativas no protocolo e podem ser aplicadas manualmente ou por implementações futuras do Sentinel.
 
 ## Regression Replay
 
@@ -263,6 +263,44 @@ O Comparative Gate compara evidências; ele não escolhe o "menos ruim".
 
 Cada candidato ainda precisa satisfazer seus próprios requisitos críticos. Se todos falharem, não existe vencedor e STABLE permanece intacto.
 
+## Proof Ceiling / Evidence Sufficiency
+
+A versão conceitual **0.5.0** formaliza um teto para a força de qualquer conclusão:
+
+> **A hypothesis can never be more verified than its weakest required evidence.**
+
+Em português:
+
+> **Uma hipótese nunca pode estar mais verificada do que sua evidência obrigatória mais fraca.**
+
+Consequências:
+
+```text
+Automated PASS + Human PENDING => não CONFIRMAR
+Automated PASS + Human FAIL    => REJECTED
+Todos required evidence PASS   => confirmation eligible
+```
+
+A IA não pode declarar `PROVEN`, `VERIFIED`, `FIXED` ou equivalente enquanto uma evidência obrigatória estiver pendente, não testada, bloqueada ou falhando.
+
+**Root Cause Claim** e **Root Cause Evidence** devem permanecer separados. Uma explicação proposta não vira prova apenas porque foi repetida com mais confiança.
+
+## Artifact / Render Integrity
+
+Um pipeline não pode transformar falha de geração em sucesso apenas porque algum arquivo foi produzido.
+
+> **An invalid generated artifact must never be promoted into a downstream success condition.**
+
+Fallback sintético, placeholder ou artefato de emergência só pode contar como sucesso se satisfizer o mesmo contrato de integridade exigido do artefato normal.
+
+Quando um render esperado falha, a implementação deve validar propriedades apropriadas como decode do formato, dimensões esperadas, tamanho plausível de buffer, page count e legibilidade pelo consumidor seguinte. Se a integridade falhar, o estado recomendado é:
+
+```text
+RENDER_INTEGRITY_FAIL
+```
+
+Se impressão/spool depende desse render, o spooler não pode ser chamado enquanto o artefato estiver inválido. Esticar um raster 1x1 inesperado para A4 não corrige a integridade do render.
+
 ## Memória executável
 
 Documentação ajuda o agente a entender por que uma parte existe.
@@ -289,6 +327,10 @@ como provar que o erro não voltou
 quais hipóteses já foram rejeitadas
 +
 quais estratégias não devem ser repetidas sem nova evidência
++
+qual evidência obrigatória ainda falta
++
+se o artefato gerado é íntegro antes de seguir downstream
 ```
 
 ## Princípios
@@ -312,6 +354,10 @@ quais estratégias não devem ser repetidas sem nova evidência
 17. Candidatos de estratégias concorrentes devem preferencialmente partir da mesma STABLE.
 18. Uma estratégia esgotada não deve ser repetida sem nova evidência ou reabertura explícita.
 19. Um Comparative Gate nunca promove o menos ruim quando nenhum candidato satisfez os requisitos críticos.
+20. Uma hipótese nunca pode estar mais verificada do que sua evidência obrigatória mais fraca.
+21. `CONFIRMED` exige que toda evidência obrigatória esteja em `PASS`; isso não equivale a promoção.
+22. Root Cause Claim deve permanecer separado de Root Cause Evidence.
+23. Artefato inválido ou fallback sintético inválido deve gerar falha de integridade e bloquear etapas downstream dependentes.
 
 ## Ecossistema GILGAL
 
@@ -339,6 +385,12 @@ separa hipóteses concorrentes a partir de uma base comum
 
 COMPARATIVE GATE
 compara candidatos por evidência sem escolher um candidato inválido
+
+PROOF CEILING / EVIDENCE SUFFICIENCY
+limita conclusões à evidência obrigatória mais fraca
+
+ARTIFACT / RENDER INTEGRITY
+bloqueia uso downstream de artefatos gerados inválidos
 
 GILGAL GATE
 controla se a promoção pode acontecer
