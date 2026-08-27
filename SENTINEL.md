@@ -1,6 +1,6 @@
 # GILGAL SENTINEL
 
-GILGAL protocol version: **0.3.0**
+GILGAL protocol version: **0.4.0**
 
 Reference implementation version: **0.2.0**
 
@@ -23,10 +23,16 @@ It is also:
 
 > Does the candidate still preserve the behavior that was verified in STABLE?
 
+From protocol 0.4.0, a difficult investigation may also ask:
+
+> Is this candidate testing a genuinely new hypothesis, or silently repeating a rejected strategy?
+
 ## Position in the workflow
 
 ```text
 STABLE
+  ↓
+problem / Hypothesis Ledger when needed
   ↓
 WORK / CANDIDATE
   ↓
@@ -38,9 +44,10 @@ GILGAL SENTINEL
   ├── regression comparison
   ├── Regression Replay
   ├── runtime checks
-  └── human-only checks
+  ├── human-only checks
+  └── Failure Memory evidence when supported
   ↓
-GILGAL GATE
+GILGAL GATE / optional Comparative Gate
   ├── FAIL / PENDING → promotion blocked
   └── PASS           → candidate may be promoted
 ```
@@ -147,6 +154,31 @@ A critical Change Budget failure blocks the Gate.
 
 Change Budget does not claim that large changes are inherently incorrect. It exists to expose a mismatch between expected task scope and actual candidate scope so that expansion cannot remain invisible.
 
+### 3.3 FAILURE MEMORY / HYPOTHESIS EVIDENCE
+
+Protocol 0.4.0 adds **Failure Memory**, **Hypothesis Ledger**, **Candidate Families**, and **Strategy Exhaustion**.
+
+A Sentinel implementation MAY consume this evidence to detect situations such as:
+
+```text
+ACTIVE candidate belongs to an EXHAUSTED strategy family
+candidate silently inherits a REJECTED hypothesis
+multiple candidates claim different strategies but are actually the same family
+required hypothesis evidence is still PENDING
+```
+
+Recommended invariant:
+
+> **A failed hypothesis must not silently become the foundation of the next hypothesis.**
+
+A Hypothesis Ledger is metadata, not executable input. Sentinel MUST NOT synthesize commands from arbitrary ledger prose.
+
+### Reference implementation note
+
+The **Sentinel Reference Implementation 0.2.0** does not yet automatically enforce every Failure Memory rule introduced in GILGAL protocol 0.4.0.
+
+This distinction is intentional: protocol version and implementation version are independent. A project may enforce the 0.4.0 Failure Memory rules manually until a reference implementation adds machine enforcement.
+
 ### 4. RUNTIME CHECK
 
 Sentinel MAY inspect runtime evidence such as:
@@ -206,6 +238,13 @@ BLOCKED
 Candidate:
 Stable reference:
 
+HYPOTHESIS / FAILURE MEMORY
+problem:
+hypothesis:
+strategy family:
+hypothesis state:
+family exhausted:
+
 CHANGE BUDGET
 status:
 
@@ -248,7 +287,7 @@ Runtime .......... 95%
 Human ............ PENDING
 ```
 
-However, a numeric score MUST NOT override a failed critical contract.
+However, a numeric score MUST NOT override a failed critical contract, a required human check, or a critical Failure Memory policy violation.
 
 Example:
 
@@ -276,6 +315,7 @@ It MAY integrate with tools such as TestSprite or other automated QA systems and
 - historical STABLE behavior;
 - Regression Replay;
 - Change Budget evidence;
+- Failure Memory / Hypothesis Ledger evidence;
 - manual approvals.
 
 ## Relationship between components
@@ -285,13 +325,25 @@ GILGAL
 protects the last known-good code
 
 GILGAL SENTINEL
-verifies the candidate and searches for regressions
+verifies candidates and searches for regressions
 
 REGRESSION REPLAY
 turns old failures into reusable executable memory
 
 CHANGE BUDGET
 makes unexpected scope expansion visible
+
+FAILURE MEMORY
+records rejected hypotheses and strategies
+
+HYPOTHESIS LEDGER
+makes investigation history explicit
+
+BRANCHING / DIVERGENCE
+isolates competing strategies from the same STABLE base
+
+COMPARATIVE GATE
+compares eligible candidates by evidence
 
 GILGAL GATE
 controls promotion
@@ -307,3 +359,7 @@ records what happened
 Combined with the GILGAL invariant:
 
 > **A failed experiment must not destroy the last known-good state.**
+
+And the Failure Memory invariant:
+
+> **A failed hypothesis must not silently become the foundation of the next hypothesis.**
