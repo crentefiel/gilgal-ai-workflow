@@ -253,7 +253,7 @@ WORK v2 herdando v1
 WORK v3 herdando v2
 ```
 
-Uma refinamento MAY continuar de um candidate anterior enquanto a hipótese original continuar ACTIVE. Uma hipótese REJECTED não deve ser reutilizada como base sem motivo explícito.
+Um refinamento MAY continuar de um CANDIDATE anterior enquanto a hipótese original continuar ACTIVE. Uma hipótese REJECTED não deve ser reutilizada como base sem motivo explícito.
 
 ## Comparative Gate
 
