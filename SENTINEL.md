@@ -1,6 +1,6 @@
 # GILGAL SENTINEL
 
-GILGAL protocol version: **0.4.0**
+GILGAL protocol version: **0.5.0**
 
 Reference implementation version: **0.2.0**
 
@@ -27,6 +27,10 @@ From protocol 0.4.0, a difficult investigation may also ask:
 
 > Is this candidate testing a genuinely new hypothesis, or silently repeating a rejected strategy?
 
+From protocol 0.5.0, it must also ask:
+
+> Is the strength of this conclusion bounded by every required evidence item, and are generated artifacts valid before downstream use?
+
 ## Position in the workflow
 
 ```text
@@ -45,6 +49,8 @@ GILGAL SENTINEL
   ├── Regression Replay
   ├── runtime checks
   ├── human-only checks
+  ├── Evidence Sufficiency / Proof Ceiling
+  ├── artifact/render integrity when applicable
   └── Failure Memory evidence when supported
   ↓
 GILGAL GATE / optional Comparative Gate
@@ -173,11 +179,21 @@ Recommended invariant:
 
 A Hypothesis Ledger is metadata, not executable input. Sentinel MUST NOT synthesize commands from arbitrary ledger prose.
 
+### 3.4 EVIDENCE SUFFICIENCY / PROOF CEILING
+
+Protocol 0.5.0 defines:
+
+> **A hypothesis can never be more verified than its weakest required evidence.**
+
+A Sentinel implementation that evaluates hypotheses SHOULD preserve per-item required-evidence status. Automated `PASS` plus required human `PENDING` cannot become `CONFIRMED`; required human `FAIL` rejects the hypothesis being tested; all required evidence `PASS` makes confirmation eligible but does not itself promote the candidate.
+
+An AI agent MUST NOT use `PROVEN`, `VERIFIED`, `FIXED`, or equivalent language while required evidence is pending, untested, blocked, or failing. Root Cause Claim and Root Cause Evidence remain separate.
+
 ### Reference implementation note
 
-The **Sentinel Reference Implementation 0.2.0** does not yet automatically enforce every Failure Memory rule introduced in GILGAL protocol 0.4.0.
+The **Sentinel Reference Implementation 0.2.0** does not yet automatically enforce every Failure Memory rule introduced in GILGAL protocol 0.4.0 or every Evidence Sufficiency / Artifact Integrity rule introduced in protocol 0.5.0.
 
-This distinction is intentional: protocol version and implementation version are independent. A project may enforce the 0.4.0 Failure Memory rules manually until a reference implementation adds machine enforcement.
+This distinction is intentional: protocol version and implementation version are independent. A project may enforce those protocol rules manually until a reference implementation adds machine enforcement.
 
 ### 4. RUNTIME CHECK
 
@@ -194,6 +210,20 @@ Sentinel MAY inspect runtime evidence such as:
 - failed state transitions.
 
 Runtime evidence MUST be collected without exposing secrets or user data unnecessarily.
+
+### 4.1 ARTIFACT / RENDER INTEGRITY
+
+When a downstream operation depends on a generated artifact, Sentinel SHOULD verify the artifact contract before treating generation as successful.
+
+A synthetic fallback or placeholder MUST NOT count as success merely because it produced a file. For a render pipeline, evidence may include decodeability, expected dimensions, plausible buffer size, expected page count, and readability by the next consumer.
+
+If required render integrity fails, the recommended result is:
+
+```text
+RENDER_INTEGRITY_FAIL
+```
+
+A dependent spool/print operation MUST NOT proceed after that failure until a valid artifact exists.
 
 ### 5. HUMAN CHECK
 
@@ -265,6 +295,13 @@ regressions found:
 RUNTIME CHECK
 status:
 
+EVIDENCE SUFFICIENCY / PROOF CEILING
+status:
+weakest required evidence:
+
+ARTIFACT / RENDER INTEGRITY
+status:
+
 HUMAN CHECK
 status:
 
@@ -287,7 +324,7 @@ Runtime .......... 95%
 Human ............ PENDING
 ```
 
-However, a numeric score MUST NOT override a failed critical contract, a required human check, or a critical Failure Memory policy violation.
+However, a numeric score MUST NOT override a failed critical contract, a required human check, the Proof Ceiling, an artifact-integrity failure, or a critical Failure Memory policy violation.
 
 Example:
 
@@ -336,6 +373,12 @@ makes unexpected scope expansion visible
 FAILURE MEMORY
 records rejected hypotheses and strategies
 
+PROOF CEILING / EVIDENCE SUFFICIENCY
+limits claim strength to the weakest required evidence
+
+ARTIFACT / RENDER INTEGRITY
+blocks invalid generated artifacts from downstream use
+
 HYPOTHESIS LEDGER
 makes investigation history explicit
 
@@ -363,3 +406,7 @@ Combined with the GILGAL invariant:
 And the Failure Memory invariant:
 
 > **A failed hypothesis must not silently become the foundation of the next hypothesis.**
+
+And the Evidence Sufficiency invariant:
+
+> **A hypothesis can never be more verified than its weakest required evidence.**
