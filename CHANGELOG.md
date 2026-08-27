@@ -2,6 +2,51 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## 0.4.0 — 2026-08-27
+
+Extended the GILGAL protocol with **Failure Memory**, **Hypothesis Ledger**, **Candidate Families**, **Strategy Exhaustion**, **Branching / Divergence**, and **Comparative Gate**.
+
+### Motivation
+
+Protecting STABLE prevents a failed experiment from destroying the last known-good version, but an AI agent can still become trapped in one bad strategy by repeatedly patching the same WORK lineage.
+
+GILGAL 0.4.0 addresses that second failure mode.
+
+### Added
+
+- **Failure Memory** as auditable memory of rejected or inconclusive hypotheses.
+- **Hypothesis Ledger** for recording problem, hypothesis, strategy family, experiment, required evidence, candidate reference, result, and evidence.
+- **Candidate Families** to distinguish genuinely different strategies from cosmetic variations of the same approach.
+- **Strategy Exhaustion** so a rejected strategy cannot be silently repeated without new evidence or explicit reopening.
+- **Branching / Divergence** recommendation: competing hypotheses should branch from the same verified STABLE base whenever practical.
+- **Comparative Gate** for comparing independently verified candidates without selecting a candidate that still fails critical evidence.
+- Explicit relationship between Failure Memory and Regression Replay.
+
+### New invariants
+
+> **A failed hypothesis must not silently become the foundation of the next hypothesis.**
+
+> **A rejected strategy must not be repeated without new evidence or explicit reopening.**
+
+> **Parallel candidates must compete on evidence, not on patch count or agent confidence.**
+
+### Memory model
+
+```text
+Executable Memory
+  remembers what worked
+
+Regression Replay
+  remembers reproducible historical regressions
+
+Failure Memory
+  remembers rejected hypotheses and strategies
+```
+
+### Reference implementation note
+
+The GILGAL Sentinel reference implementation remains at **0.2.0** in this protocol release. It does not yet automatically enforce every Failure Memory rule from protocol 0.4.0. Protocol version and implementation version remain independent.
+
 ## GILGAL Sentinel reference implementation 0.2.0 — 2026-08-26
 
 This implementation version is independent from the GILGAL protocol version.

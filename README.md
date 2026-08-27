@@ -8,7 +8,7 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 **Concept documented by:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **First public specification:** 2026-08-25  
-**Current concept version:** 0.3.0
+**Current concept version:** 0.4.0
 
 ---
 
@@ -16,56 +16,53 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 O **GILGAL** é um protocolo de trabalho para agentes de IA que programam software.
 
-A ideia central é manter o último estado comprovadamente bom protegido enquanto a IA trabalha em um candidato isolado.
+A ideia central é manter o último estado comprovadamente bom protegido enquanto a IA trabalha em candidatos isolados — e, a partir da versão 0.4.0, também impedir que uma hipótese já rejeitada continue sendo repetida silenciosamente em novas tentativas.
 
 - **STABLE** — última versão comprovadamente funcional.
 - **WORK / CANDIDATE** — ambiente onde a IA pode editar, experimentar e corrigir.
 - **SENTINEL** — reúne evidências, executa verificações e procura regressões.
 - **GATE** — bloqueia promoção quando os requisitos não foram comprovados.
+- **FAILURE MEMORY** — registra hipóteses e estratégias rejeitadas.
+- **HYPOTHESIS LEDGER** — torna o histórico da investigação explícito.
+- **BRANCHING / DIVERGENCE** — separa estratégias concorrentes a partir da mesma base STABLE.
 
 A IA nunca deve usar STABLE como laboratório.
 
 ```text
-STABLE
-  │
-  ├── cria CANDIDATE / WORK
-  │
-  ▼
-WORK
-  │
-  ├── alterações
-  ├── diff
-  ├── Change Budget
-  ├── typecheck / testes / build
-  ├── contratos
-  ├── Regression Replay
-  └── testes humanos quando necessários
-  │
-  ▼
-GILGAL SENTINEL
-  │
-  ├── verifica código
-  ├── executa/consome testes
-  ├── compara STABLE x CANDIDATE
-  ├── repete regressões conhecidas
-  ├── detecta expansão de escopo
-  └── exige validação humana quando necessário
-  │
-  ▼
-GILGAL GATE
-  │
-  ├── FAIL/PENDING → STABLE permanece intacto
-  │
-  └── PASS         → candidato pode ser promovido
+                    STABLE
+                      │
+              definir problema
+                      │
+              Hypothesis Ledger
+                      │
+        ┌─────────────┼─────────────┐
+        │             │             │
+   CANDIDATE A   CANDIDATE B   CANDIDATE C
+   strategy A    strategy B    strategy C
+        │             │             │
+     Sentinel      Sentinel      Sentinel
+        └─────────────┼─────────────┘
+                      │
+              COMPARATIVE GATE
+                      │
+               best verified path
+                      │
+                 GILGAL GATE
+                      │
+                  HUMAN CHECK
+                      │
+                  NEW STABLE
 ```
 
-Se a tentativa falhar, a versão funcional anterior continua preservada e pode ser usada como **memória executável** para comparar o que mudou.
+Se uma tentativa falhar, STABLE permanece intacto. Se uma hipótese falhar, essa decisão também pode ser preservada como **Failure Memory**, para impedir que a IA apenas renomeie a mesma estratégia e tente novamente sem nova evidência.
+
+> **Executable Memory remembers what worked. Failure Memory remembers what must not be repeated.**
 
 O GILGAL não tenta substituir Git, branches, worktrees, CI ou ferramentas de teste. Ele organiza esses mecanismos em um protocolo específico para agentes de IA.
 
 ### Regression Replay
 
-A partir da evolução 0.3.0, o GILGAL recomenda transformar bugs já encontrados e corrigidos em contratos reproduzíveis.
+Desde 0.3.0, o GILGAL recomenda transformar bugs já encontrados e corrigidos em contratos reproduzíveis.
 
 > **Every regression should become a contract.**
 
@@ -81,42 +78,78 @@ SCOPE EXPANSION DETECTED
 
 Isso não significa automaticamente que uma mudança grande está errada. Significa que uma expansão inesperada de escopo precisa ser revisada antes de substituir STABLE.
 
+### Failure Memory e Hypothesis Ledger
+
+A versão 0.4.0 adiciona uma proteção para um problema diferente: a IA pode preservar STABLE corretamente e, ainda assim, ficar presa em uma mesma hipótese ruim.
+
+Exemplo do que evitar:
+
+```text
+STABLE
+↓
+WORK v1 com hipótese errada
+↓
+WORK v2 herdando v1
+↓
+WORK v3 herdando v2
+↓
+mais workarounds, mesma estratégia
+```
+
+Nova regra:
+
+> **A failed hypothesis must not silently become the foundation of the next hypothesis.**
+
+Uma investigação difícil SHOULD registrar hipótese, família de estratégia, experimento, evidência necessária e resultado. Uma estratégia rejeitada pode ser marcada como **EXHAUSTED** e não deve receber outra tentativa sem nova evidência ou reabertura explícita.
+
+Veja [HYPOTHESIS_LEDGER.md](HYPOTHESIS_LEDGER.md).
+
 ---
 
 ## English
 
 **GILGAL** is a guarded development protocol for AI coding agents.
 
-Its central idea is to keep the last verified version protected while the AI works in an isolated candidate environment.
+Its central idea is to keep the last verified version protected while the AI works in isolated candidate environments. Version 0.4.0 extends this with decision memory so rejected hypotheses do not silently become the basis of later attempts.
 
 ```mermaid
 flowchart TD
-    S[STABLE<br/>Last known-good state] --> W[WORK / CANDIDATE<br/>AI edits here]
-    W --> B[Change Budget<br/>scope expansion check]
-    B --> N[GILGAL SENTINEL<br/>verification layer]
-    N --> D[Code checks + automated tests]
-    D --> R[Regression contracts + Regression Replay]
-    R --> H{Human-only checks required?}
-    H -->|Yes| M[Manual validation]
-    H -->|No| G{GILGAL Gate}
-    M --> G
-    G -->|Fail or pending| F[Reject, fix, or archive candidate]
-    F --> S
-    G -->|Pass + approval| P[Promote candidate]
+    S[STABLE<br/>Last known-good state] --> L[Hypothesis Ledger<br/>problem + strategy + required evidence]
+    L --> A[CANDIDATE A<br/>strategy A]
+    L --> B[CANDIDATE B<br/>strategy B]
+    L --> C[CANDIDATE C<br/>strategy C]
+    A --> SA[Sentinel A]
+    B --> SB[Sentinel B]
+    C --> SC[Sentinel C]
+    SA --> G{Comparative Gate}
+    SB --> G
+    SC --> G
+    G -->|No eligible candidate| F[Failure Memory<br/>record rejected hypotheses]
+    G -->|Eligible candidate| N{GILGAL Gate}
+    N -->|Fail or pending| F
+    N -->|Pass + required approval| P[Promote candidate]
     P --> S2[New STABLE]
 ```
 
 ## Why GILGAL?
 
-AI coding agents are fast, but a local fix can accidentally break an older behavior that was already working. A successful build does not prove that the application still behaves correctly.
+AI coding agents are fast, but a local fix can accidentally break older behavior or become trapped in an incorrect debugging strategy. A successful build does not prove that the application still behaves correctly, and repeated patches do not prove that the underlying hypothesis is valid.
 
-GILGAL changes the default question from:
+GILGAL changes the default questions from:
 
 > “Did the new code compile?”
 
+and:
+
+> “Can I patch this attempt again?”
+
 into:
 
-> “Did the candidate preserve the verified behavior of the stable version?”
+> “Did the candidate preserve the verified behavior of STABLE?”
+
+and:
+
+> “Is this genuinely new evidence or am I repeating a rejected strategy?”
 
 ## GILGAL Sentinel
 
@@ -130,7 +163,8 @@ It may combine:
 - Regression Replay for previously fixed bugs;
 - Change Budget evidence for scope expansion;
 - runtime/log analysis;
-- human-only validation gates.
+- human-only validation gates;
+- Failure Memory and Hypothesis Ledger evidence when supported by the implementation.
 
 Sentinel is tool-agnostic. It may consume results from TestSprite, Playwright, Vitest, Jest, pytest, CI systems, or other test engines.
 
@@ -141,6 +175,8 @@ A critical contract failing in CANDIDATE while passing in STABLE must block prom
 This repository includes **GILGAL Sentinel Reference Implementation 0.2.0** in [`sentinel/`](sentinel/README.md). Its implementation version is independent from the GILGAL protocol version.
 
 The local TypeScript CLI resolves STABLE/CANDIDATE Git evidence, runs configured checks, evaluates `command`, `manual`, and `replay` contracts, compares exact-SHA baselines, enforces an optional Change Budget, writes JSON/Markdown reports, and returns CI-compatible gate exit codes. It never promotes code or mutates STABLE.
+
+The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule from protocol 0.4.0. Those rules are already part of the protocol and may be applied manually or by future Sentinel implementations.
 
 ## Regression Replay
 
@@ -171,6 +207,47 @@ A project may configure explicit limits for candidate scope, such as:
 
 When a critical budget is exceeded, Sentinel reports `SCOPE EXPANSION DETECTED` and blocks promotion until the change is reduced or the policy is deliberately revised.
 
+## Failure Memory
+
+Failure Memory preserves rejected or inconclusive reasoning paths as auditable decision evidence.
+
+> **A failed hypothesis must not silently become the foundation of the next hypothesis.**
+
+A Candidate Family groups attempts that test the same underlying strategy. A family may be marked **EXHAUSTED** when the available evidence rejects that strategy. An AI agent must not silently reopen an exhausted family merely by renaming the implementation.
+
+## Hypothesis Ledger
+
+For difficult debugging, repeated failures, or problems without a known-good implementation, a project should record:
+
+```text
+problem id
+hypothesis id
+strategy family
+claim
+experiment
+required evidence
+candidate reference
+result
+supporting evidence
+```
+
+Recommended states:
+
+```text
+ACTIVE
+CONFIRMED
+REJECTED
+INCONCLUSIVE
+```
+
+The ledger is evidence metadata, not executable instructions.
+
+## Comparative Gate
+
+When multiple candidates test different strategies, GILGAL may compare them using a Comparative Gate.
+
+The Comparative Gate does not choose the "least bad" candidate. Every candidate must satisfy its own critical evidence. If none do, there is no winner and STABLE remains unchanged.
+
 ## Core principles
 
 1. **Protect the last known-good state.**
@@ -184,6 +261,10 @@ When a critical budget is exceeded, Sentinel reports `SCOPE EXPANSION DETECTED` 
 9. **Sentinel compares verified STABLE behavior against CANDIDATE behavior.**
 10. **Previously fixed regressions should become replayable contracts when reproducible.**
 11. **Unexpected scope expansion should be made visible before promotion.**
+12. **Rejected hypotheses should become Failure Memory when relevant.**
+13. **Competing hypotheses should branch from the same STABLE base whenever practical.**
+14. **An exhausted strategy must not be silently repeated without new evidence or explicit reopening.**
+15. **A Comparative Gate must return no winner when no candidate satisfies critical requirements.**
 
 ## Suggested implementation
 
@@ -191,10 +272,13 @@ A practical implementation can use:
 
 - Git branches
 - Git worktrees
+- parallel candidate branches for competing hypotheses
 - automated typecheck/tests/build
 - regression contracts
 - Regression Replay
 - Change Budget
+- Hypothesis Ledger records
+- Failure Memory
 - CI checks
 - manual approval gates
 - tags or commits for rollback points
@@ -203,8 +287,9 @@ A practical implementation can use:
 Example layout:
 
 ```text
-project/                 ← STABLE
-project-GILGAL-WORK/     ← WORK / CANDIDATE
+project/                              ← STABLE
+project-GILGAL-WORK-A/                ← hypothesis A
+project-GILGAL-WORK-B/                ← hypothesis B
 ```
 
 The folders are conceptually separate, while Git can share repository history and objects efficiently.
@@ -214,15 +299,16 @@ The folders are conceptually separate, while Git can share repository history an
 A candidate **MUST NOT** replace STABLE if any required gate fails.
 
 ```text
-STABLE works
+STABLE protected
 CANDIDATE fails
         ↓
 GILGAL SENTINEL
-REGRESSION DETECTED
         ↓
 PROMOTION BLOCKED
         ↓
-STABLE remains untouched
+Failure Memory records why
+        ↓
+new hypothesis branches from STABLE
 ```
 
 ## Human gate
@@ -237,25 +323,37 @@ Some behaviors cannot be proven by source code or CI alone, for example:
 
 In those cases, the AI may report **PENDING**, but it must not mark the test as passed on its own.
 
-## Memory by executable history
+## Memory model
 
-Documentation helps an AI understand *why* the system exists.
-
-GILGAL adds something stronger: the last working implementation remains available to answer *how it worked when it was correct*.
-
-When a regression appears, the agent can compare:
+GILGAL now distinguishes several forms of memory:
 
 ```text
-KNOWN-GOOD STABLE
-        VS
-BROKEN CANDIDATE
+Executable Memory
+  what worked in STABLE
+
+Regression Replay
+  how a previously fixed bug can be reproduced
+
+Failure Memory
+  which hypotheses or strategies were rejected and why
 ```
 
-Regression Replay adds another layer: the failure itself can become executable historical memory.
+Together:
+
+```text
+what worked
++
+what failed
++
+why a strategy was rejected
++
+how to prove the regression did not return
+```
 
 ## Documents
 
 - [GILGAL.md](GILGAL.md) — concept, origin and principles
+- [HYPOTHESIS_LEDGER.md](HYPOTHESIS_LEDGER.md) — Failure Memory, Candidate Families, Strategy Exhaustion and Branching
 - [SENTINEL.md](SENTINEL.md) — verification and regression-detection layer
 - [SPECIFICATION.md](SPECIFICATION.md) — normative workflow and state transitions
 - [CHANGELOG.md](CHANGELOG.md) — concept history
@@ -263,9 +361,9 @@ Regression Replay adds another layer: the failure itself can become executable h
 
 ## Scope and prior art note
 
-Git branches, worktrees, CI, staging environments, rollback strategies, promotion gates and automated testing are established software-engineering mechanisms.
+Git branches, worktrees, CI, staging environments, rollback strategies, promotion gates, parallel experiment branches and automated testing are established software-engineering mechanisms.
 
-**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, human-only validation, Regression Replay, and explicit change-scope budgeting.**
+**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, human-only validation, Regression Replay, explicit change-scope budgeting, Failure Memory, Hypothesis Ledger, Candidate Families, Strategy Exhaustion, Branching/Divergence, and Comparative Gate.**
 
 This repository documents the concept and its evolution. It does not make a claim of patent status or worldwide novelty.
 
@@ -273,6 +371,6 @@ This repository documents the concept and its evolution. It does not make a clai
 
 ## Status
 
-**GILGAL protocol 0.3.0 + GILGAL Sentinel reference implementation 0.2.0.**
+**GILGAL protocol 0.4.0 + GILGAL Sentinel reference implementation 0.2.0.**
 
 Feedback, experiments and reference implementations are welcome.
