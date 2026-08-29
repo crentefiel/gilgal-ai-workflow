@@ -1,6 +1,6 @@
 # GILGAL Specification
 
-GILGAL protocol version: **0.4.0**
+GILGAL protocol version: **0.5.0**
 
 This document defines the normative workflow for the GILGAL protocol.
 
@@ -89,7 +89,7 @@ Sentinel **MUST NOT** treat a successful build alone as sufficient evidence for 
 
 The repository's GILGAL Sentinel Reference Implementation has its own version, **0.2.0**, independent from this protocol version. It is an evidence provider for the Gate and **MUST NOT** perform promotion, modify STABLE, or manufacture human approval.
 
-The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule introduced in protocol 0.4.0. A workflow MAY enforce those rules manually or through another conforming implementation.
+The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule introduced in protocol 0.4.0 or every Evidence Sufficiency / Artifact Integrity rule introduced in protocol 0.5.0. A workflow MAY enforce those rules manually or through another conforming implementation.
 
 ## 6. Code and automated validation
 
@@ -171,6 +171,46 @@ When a Change Budget is configured as critical and the candidate exceeds it, the
 
 An AI agent **MUST NOT** silently increase the budget merely to make its own candidate pass.
 
+### 7.3 Evidence Sufficiency / Proof Ceiling
+
+GILGAL 0.5.0 defines a **Proof Ceiling** for every claim that depends on required evidence:
+
+> **A hypothesis can never be more verified than its weakest required evidence.**
+
+For each hypothesis, required evidence MUST be explicit enough to determine whether every required item is `PASS`, `FAIL`, `PENDING`, `NOT TESTED`, or `BLOCKED`.
+
+The following rules apply:
+
+- automated `PASS` plus required human `PENDING` **MUST NOT** produce `CONFIRMED`;
+- automated `PASS` plus required human `FAIL` **MUST** produce `REJECTED` for the hypothesis being tested;
+- all required evidence `PASS` makes the hypothesis **eligible** for confirmation, but does not itself promote a candidate;
+- any required evidence that is `PENDING`, `NOT TESTED`, or `BLOCKED` means the hypothesis is not confirmation-eligible;
+- an AI agent **MUST NOT** describe a hypothesis, root cause, or fix as `PROVEN`, `VERIFIED`, `FIXED`, or equivalent while required evidence is pending, untested, blocked, or failing.
+
+A project MAY use stricter policies, but it MUST NOT weaken this ceiling.
+
+### 7.4 Artifact and Render Integrity
+
+A generated artifact that is required by a downstream step MUST satisfy its required integrity contract before that downstream step may treat generation as successful.
+
+A synthetic, placeholder, emergency, or fallback artifact **MUST NOT** be treated as success merely because a file was produced. A fallback MAY count as success only if it independently satisfies the same required artifact contract.
+
+For rendering pipelines, implementations SHOULD validate evidence appropriate to the declared output, including:
+
+- decodable file format;
+- expected or contract-valid width and height;
+- plausible non-truncated buffer size for the expected output;
+- expected page count when pagination is known;
+- artifact readability by the intended downstream consumer.
+
+When required render integrity fails, the result SHOULD be reported as:
+
+```text
+RENDER_INTEGRITY_FAIL
+```
+
+If a downstream print/spool operation depends on that render, the spooler **MUST NOT** be called after `RENDER_INTEGRITY_FAIL` until a valid artifact is produced. Stretching an invalid placeholder, such as an unexpected 1x1 raster for a full-page render, does not repair artifact integrity.
+
 ## 8. Failure Memory
 
 Failure Memory records rejected or inconclusive hypotheses and strategy families so an AI agent does not silently repeat the same failed reasoning path.
@@ -198,8 +238,10 @@ A ledger entry **SHOULD** record:
 - hypothesis identifier;
 - strategy family;
 - claim being tested;
+- root cause claim, when one is asserted;
+- root cause evidence, kept distinct from the claim;
 - experiment or validation plan;
-- required evidence;
+- required evidence and per-item status;
 - candidate reference;
 - result;
 - supporting evidence references.
@@ -213,7 +255,9 @@ REJECTED
 INCONCLUSIVE
 ```
 
-An AI agent **MUST NOT** mark a hypothesis CONFIRMED when the required evidence has not been produced.
+An AI agent **MUST NOT** mark a hypothesis CONFIRMED when the required evidence has not been produced. Confirmation eligibility is limited by the Proof Ceiling in section 7.3.
+
+A Root Cause Claim **MUST** remain distinguishable from Root Cause Evidence. Repeating or strengthening a claim is not additional evidence.
 
 Human-only evidence remains subject to the human-validation requirements in this specification.
 
@@ -333,6 +377,8 @@ A Sentinel report **SHOULD** identify:
 - regression-check status;
 - runtime-check status;
 - human-check status;
+- Evidence Sufficiency / Proof Ceiling status when hypotheses are evaluated;
+- artifact/render integrity status when generated artifacts are required;
 - critical regressions found;
 - final promotion recommendation.
 
@@ -357,6 +403,8 @@ Promotion **SHOULD** require:
 - required regression contracts passing;
 - required replay contracts passing;
 - required manual approvals complete;
+- every required evidence item satisfies the Proof Ceiling;
+- required artifact/render integrity checks pass before dependent downstream operations;
 - required Change Budget policy satisfied;
 - no unresolved merge conflict;
 - no unresolved critical Failure Memory violation when that policy is enabled.
@@ -402,6 +450,8 @@ what worked
 what failed
 +
 why a strategy was rejected
++
+what evidence is still missing
 +
 how to prove a regression did not return
 ```
@@ -455,6 +505,12 @@ CHANGE BUDGET
 FAILURE MEMORY
   records rejected hypotheses and strategies
 
+PROOF CEILING / EVIDENCE SUFFICIENCY
+  limits every claim to its weakest required evidence
+
+ARTIFACT INTEGRITY
+  blocks downstream use of invalid generated artifacts
+
 HYPOTHESIS LEDGER
   makes investigation history explicit and auditable
 
@@ -489,6 +545,14 @@ The defining Strategy Exhaustion invariant is:
 
 > **A rejected strategy must not be repeated without new evidence or explicit reopening.**
 
+The defining Evidence Sufficiency invariant is:
+
+> **A hypothesis can never be more verified than its weakest required evidence.**
+
+The defining Artifact Integrity invariant is:
+
+> **An invalid generated artifact must never be promoted into a downstream success condition.**
+
 Or, equivalently:
 
 ```text
@@ -497,6 +561,8 @@ WORK is experimental.
 SENTINEL verifies.
 REGRESSIONS become executable memory.
 FAILURES become decision memory.
+EVIDENCE limits claim strength.
+INVALID artifacts block dependent downstream work.
 SCOPE expansion is visible.
 COMPETING hypotheses branch instead of silently stacking.
 PROMOTION is gated.

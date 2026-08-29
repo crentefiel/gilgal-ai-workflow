@@ -8,7 +8,7 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 **Concept documented by:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **First public specification:** 2026-08-25  
-**Current concept version:** 0.4.0
+**Current concept version:** 0.5.0
 
 ---
 
@@ -16,7 +16,7 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 O **GILGAL** é um protocolo de trabalho para agentes de IA que programam software.
 
-A ideia central é manter o último estado comprovadamente bom protegido enquanto a IA trabalha em candidatos isolados — e, a partir da versão 0.4.0, também impedir que uma hipótese já rejeitada continue sendo repetida silenciosamente em novas tentativas.
+A ideia central é manter o último estado comprovadamente bom protegido enquanto a IA trabalha em candidatos isolados — a versão 0.4.0 impede que hipóteses rejeitadas sejam repetidas silenciosamente, e a versão 0.5.0 limita conclusões à evidência obrigatória mais fraca e bloqueia artefatos gerados inválidos.
 
 - **STABLE** — última versão comprovadamente funcional.
 - **WORK / CANDIDATE** — ambiente onde a IA pode editar, experimentar e corrigir.
@@ -25,6 +25,8 @@ A ideia central é manter o último estado comprovadamente bom protegido enquant
 - **FAILURE MEMORY** — registra hipóteses e estratégias rejeitadas.
 - **HYPOTHESIS LEDGER** — torna o histórico da investigação explícito.
 - **BRANCHING / DIVERGENCE** — separa estratégias concorrentes a partir da mesma base STABLE.
+- **PROOF CEILING / EVIDENCE SUFFICIENCY** — impede uma conclusão de exceder sua evidência obrigatória mais fraca.
+- **ARTIFACT / RENDER INTEGRITY** — impede que fallback ou artefato inválido seja tratado como sucesso downstream.
 
 A IA nunca deve usar STABLE como laboratório.
 
@@ -104,13 +106,29 @@ Uma investigação difícil SHOULD registrar hipótese, família de estratégia,
 
 Veja [HYPOTHESIS_LEDGER.md](HYPOTHESIS_LEDGER.md).
 
+### Proof Ceiling / Evidence Sufficiency
+
+A versão 0.5.0 adiciona a regra:
+
+> **A hypothesis can never be more verified than its weakest required evidence.**
+
+Assim, `Automated PASS + Human PENDING` não pode virar `CONFIRMED`; `Automated PASS + Human FAIL` rejeita a hipótese; e somente quando toda evidência obrigatória estiver em `PASS` a hipótese fica elegível para confirmação. `CONFIRMED` continua diferente de `PROMOTED`.
+
+A IA também não pode declarar `PROVEN`, `VERIFIED` ou `FIXED` enquanto evidência obrigatória estiver pendente, bloqueada, não testada ou falhando. **Root Cause Claim** e **Root Cause Evidence** permanecem separados.
+
+### Artifact / Render Integrity
+
+Produzir um arquivo não prova que o render funcionou. Fallback sintético, placeholder ou artefato de emergência só conta como sucesso se satisfizer o mesmo contrato de integridade esperado do artefato normal.
+
+Para pipelines de render/impressão, falha de decode, dimensões inválidas, buffer incompatível com a saída esperada, page count incorreto ou artefato ilegível devem bloquear a próxima etapa. O estado recomendado é `RENDER_INTEGRITY_FAIL`; um spooler dependente não deve ser chamado até existir artefato válido.
+
 ---
 
 ## English
 
 **GILGAL** is a guarded development protocol for AI coding agents.
 
-Its central idea is to keep the last verified version protected while the AI works in isolated candidate environments. Version 0.4.0 extends this with decision memory so rejected hypotheses do not silently become the basis of later attempts.
+Its central idea is to keep the last verified version protected while the AI works in isolated candidate environments. Version 0.4.0 extends this with decision memory so rejected hypotheses do not silently become the basis of later attempts. Version 0.5.0 adds Evidence Sufficiency / Proof Ceiling and Artifact Integrity.
 
 ```mermaid
 flowchart TD
@@ -176,7 +194,7 @@ This repository includes **GILGAL Sentinel Reference Implementation 0.2.0** in [
 
 The local TypeScript CLI resolves STABLE/CANDIDATE Git evidence, runs configured checks, evaluates `command`, `manual`, and `replay` contracts, compares exact-SHA baselines, enforces an optional Change Budget, writes JSON/Markdown reports, and returns CI-compatible gate exit codes. It never promotes code or mutates STABLE.
 
-The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule from protocol 0.4.0. Those rules are already part of the protocol and may be applied manually or by future Sentinel implementations.
+The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule from protocol 0.4.0 or every Evidence Sufficiency / Artifact Integrity rule from protocol 0.5.0. Those rules are already part of the protocol and may be applied manually or by future Sentinel implementations.
 
 ## Regression Replay
 
@@ -242,6 +260,22 @@ INCONCLUSIVE
 
 The ledger is evidence metadata, not executable instructions.
 
+## Evidence Sufficiency / Proof Ceiling
+
+GILGAL 0.5.0 defines a ceiling on claim strength:
+
+> **A hypothesis can never be more verified than its weakest required evidence.**
+
+Automated `PASS` plus required human `PENDING` cannot become `CONFIRMED`. Automated `PASS` plus required human `FAIL` rejects the hypothesis. All required evidence `PASS` makes confirmation eligible, but does not itself authorize promotion.
+
+AI agents must not use `PROVEN`, `VERIFIED`, `FIXED`, or equivalent language while required evidence is pending, untested, blocked, or failing. Root Cause Claim and Root Cause Evidence remain separate records.
+
+## Artifact / Render Integrity
+
+A generated file is not automatically a valid artifact. Synthetic fallbacks and placeholders count as success only if they independently satisfy the same required artifact contract.
+
+When required rendering integrity fails, implementations should report `RENDER_INTEGRITY_FAIL` and block dependent downstream operations such as spooling/printing until a valid artifact exists.
+
 ## Comparative Gate
 
 When multiple candidates test different strategies, GILGAL may compare them using a Comparative Gate.
@@ -265,6 +299,9 @@ The Comparative Gate does not choose the "least bad" candidate. Every candidate 
 13. **Competing hypotheses should branch from the same STABLE base whenever practical.**
 14. **An exhausted strategy must not be silently repeated without new evidence or explicit reopening.**
 15. **A Comparative Gate must return no winner when no candidate satisfies critical requirements.**
+16. **A hypothesis can never be more verified than its weakest required evidence.**
+17. **Root Cause Claim remains separate from Root Cause Evidence.**
+18. **Invalid generated artifacts must block dependent downstream work.**
 
 ## Suggested implementation
 
@@ -279,6 +316,8 @@ A practical implementation can use:
 - Change Budget
 - Hypothesis Ledger records
 - Failure Memory
+- required-evidence status tracking / Proof Ceiling
+- artifact/render integrity checks before downstream use
 - CI checks
 - manual approval gates
 - tags or commits for rollback points
@@ -363,7 +402,7 @@ See [GILGAL 0.5 Capability-Aware Reconciliation](GILGAL_0_5_CAPABILITY_RECONCILI
 ## Documents
 
 - [GILGAL.md](GILGAL.md) — concept, origin and principles
-- [HYPOTHESIS_LEDGER.md](HYPOTHESIS_LEDGER.md) — Failure Memory, Candidate Families, Strategy Exhaustion and Branching
+- [HYPOTHESIS_LEDGER.md](HYPOTHESIS_LEDGER.md) — Failure Memory, Evidence Sufficiency, Candidate Families, Strategy Exhaustion and Branching
 - [SENTINEL.md](SENTINEL.md) — verification and regression-detection layer
 - [SPECIFICATION.md](SPECIFICATION.md) — normative workflow and state transitions
 - [CHANGELOG.md](CHANGELOG.md) — concept history
@@ -373,7 +412,7 @@ See [GILGAL 0.5 Capability-Aware Reconciliation](GILGAL_0_5_CAPABILITY_RECONCILI
 
 Git branches, worktrees, CI, staging environments, rollback strategies, promotion gates, parallel experiment branches and automated testing are established software-engineering mechanisms.
 
-**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, human-only validation, Regression Replay, explicit change-scope budgeting, Failure Memory, Hypothesis Ledger, Candidate Families, Strategy Exhaustion, Branching/Divergence, and Comparative Gate.**
+**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, human-only validation, Regression Replay, explicit change-scope budgeting, Failure Memory, Hypothesis Ledger, Candidate Families, Strategy Exhaustion, Branching/Divergence, Comparative Gate, Evidence Sufficiency / Proof Ceiling, and Artifact / Render Integrity.**
 
 This repository documents the concept and its evolution. It does not make a claim of patent status or worldwide novelty.
 
@@ -381,6 +420,6 @@ This repository documents the concept and its evolution. It does not make a clai
 
 ## Status
 
-**GILGAL protocol 0.4.0 + GILGAL Sentinel reference implementation 0.2.0.**
+**GILGAL protocol 0.5.0 + GILGAL Sentinel reference implementation 0.2.0.**
 
 Feedback, experiments and reference implementations are welcome.

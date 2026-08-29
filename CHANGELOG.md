@@ -2,6 +2,31 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## 0.5.0 — 2026-08-27
+
+Extended the GILGAL protocol with **Proof Ceiling / Evidence Sufficiency** and **Artifact / Render Integrity**.
+
+### Motivation
+
+A candidate can pass automated checks while still lacking required human or physical evidence. Separately, a pipeline can emit a syntactically present but invalid fallback artifact and accidentally treat file creation as successful execution.
+
+### Added
+
+- Invariant: **A hypothesis can never be more verified than its weakest required evidence.**
+- `Automated PASS + Human PENDING` cannot become `CONFIRMED`.
+- `Automated PASS + Human FAIL` rejects the hypothesis being tested.
+- All required evidence `PASS` makes confirmation eligible but does not itself authorize promotion.
+- AI agents must not say `PROVEN`, `VERIFIED`, `FIXED`, or equivalent while required evidence is pending, untested, blocked, or failing.
+- **Root Cause Claim** is explicitly separated from **Root Cause Evidence**.
+- Synthetic/placeholder fallback artifacts cannot be treated as success unless they satisfy the same required artifact contract.
+- Recommended `RENDER_INTEGRITY_FAIL` status for invalid render artifacts.
+- Dependent downstream operations such as spooling/printing must be blocked after render-integrity failure until a valid artifact exists.
+- Suggested integrity evidence includes decodeability, expected dimensions, plausible buffer size, page count, and downstream readability.
+
+### Reference implementation note
+
+The GILGAL Sentinel reference implementation remains at **0.2.0**. Protocol 0.5.0 is normative even though the reference implementation does not yet automatically enforce all Evidence Sufficiency and Artifact Integrity rules.
+
 ## 0.4.0 — 2026-08-27
 
 Extended the GILGAL protocol with **Failure Memory**, **Hypothesis Ledger**, **Candidate Families**, **Strategy Exhaustion**, **Branching / Divergence**, and **Comparative Gate**.
