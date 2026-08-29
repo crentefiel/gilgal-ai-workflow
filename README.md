@@ -350,6 +350,16 @@ why a strategy was rejected
 how to prove the regression did not return
 ```
 
+## GILGAL 0.5 protocol candidate
+
+A capability-aware evolution is under review. It adds Capability Ledger, Preservation Baseline, Regression Quarantine, Composite `NO_WINNER`, Capability Transplant and Reconciliation Candidates.
+
+The candidate also proposes Transplant Manifests, a Capability Dependency Graph, a Blast-Radius Gate, evidence provenance/taint rules, shadow validation and confidence-aware revalidation.
+
+This is a protocol proposal. The current Sentinel 0.2.0 reference implementation does not yet enforce these rules automatically.
+
+See [GILGAL 0.5 Capability-Aware Reconciliation](GILGAL_0_5_CAPABILITY_RECONCILIATION.md).
+
 ## Documents
 
 - [GILGAL.md](GILGAL.md) — concept, origin and principles
