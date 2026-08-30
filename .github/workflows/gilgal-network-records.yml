@@ -51,5 +51,16 @@ jobs:
           fi
           echo "Invalid human VERIFIED evidence was correctly rejected"
 
+      - name: Setup OPA
+        uses: open-policy-agent/setup-opa@v2.4.0
+        with:
+          version: latest
+
+      - name: Strict coordinator policy check
+        run: opa check --strict network/opa
+
+      - name: Run coordinator contract tests
+        run: opa test network/opa -v
+
       - name: Confirm safety boundary
-        run: echo "This workflow validates records only; it cannot merge, approve or perform physical actions."
+        run: echo "This workflow validates records and decisions only; it cannot merge, approve or perform physical actions."

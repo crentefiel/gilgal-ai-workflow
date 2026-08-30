@@ -6,7 +6,9 @@
   "taskId": "TASK-DEMO-001",
   "attemptId": "ATTEMPT-DEMO-001",
   "candidateSha": "2222222222222222222222222222222222222222",
-  "capabilityIds": ["PRINT_DUPLEX"],
+  "capabilityIds": [
+    "PRINT_DUPLEX"
+  ],
   "evidenceKind": "HUMAN",
   "integrity": "VERIFIED",
   "environment": {
@@ -15,5 +17,6 @@
     "device": "example-printer"
   },
   "reference": "agent-asserted-human-pass",
-  "synthetic": false
+  "synthetic": false,
+  "result": "PASS"
 }

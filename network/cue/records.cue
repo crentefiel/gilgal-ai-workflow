@@ -8,6 +8,7 @@ package network
 #CapabilityState: "KNOWN_GOOD" | "KNOWN_BAD" | "UNKNOWN" | "PENDING" | "NOT_TESTED" | "PASS" | "FAIL"
 #EvidenceKind: "AUTOMATED" | "INTEGRATION" | "PACKAGED" | "PHYSICAL" | "HUMAN"
 #EvidenceIntegrity: "VERIFIED" | "CLAIMED" | "TAINTED" | "STALE"
+#EvidenceResult: "PASS" | "FAIL" | "PENDING"
 #GateOutcome: "PROMOTABLE" | "BLOCKED" | "PENDING_HUMAN_EVIDENCE" | "REGRESSION_QUARANTINE" | "NO_WINNER"
 
 #RecordBase: {
@@ -101,6 +102,7 @@ package network
 	capabilityIds: [#Identifier, ...#Identifier]
 	evidenceKind: #EvidenceKind
 	integrity:    #EvidenceIntegrity
+	result:       #EvidenceResult
 	environment:  #Environment
 	reference:    #NonEmpty
 	synthetic:    bool | *false
