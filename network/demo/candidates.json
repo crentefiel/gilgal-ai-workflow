@@ -1,0 +1,132 @@
+{
+  "attemptA": {
+    "candidateSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "createdAt": "2026-08-30T20:05:00Z",
+    "response": {
+      "contributor": {
+        "name": "simulated-agent-a",
+        "provider": "demo",
+        "version": "0.1"
+      },
+      "hypothesis": "A direct bridge replacement will enable duplex.",
+      "strategy": "Replace the printing bridge in the allowed scope.",
+      "changedFiles": ["src/printing/bridge.py"],
+      "rollbackReference": "demo-revert-a",
+      "capabilityChanges": [
+        {
+          "capabilityId": "PRINT_DUPLEX",
+          "stableStatus": "KNOWN_BAD",
+          "candidateStatus": "PASS"
+        },
+        {
+          "capabilityId": "WHATSAPP_QR",
+          "stableStatus": "KNOWN_GOOD",
+          "candidateStatus": "FAIL"
+        },
+        {
+          "capabilityId": "FILE_RECEPTION",
+          "stableStatus": "KNOWN_GOOD",
+          "candidateStatus": "FAIL"
+        }
+      ],
+      "evidenceClaims": [
+        {
+          "capabilityIds": ["PRINT_DUPLEX"],
+          "evidenceKind": "AUTOMATED",
+          "environment": {"os": "demo", "architecture": "x64"},
+          "reference": "demo://attempt-a/duplex",
+          "synthetic": false
+        },
+        {
+          "capabilityIds": ["WHATSAPP_QR", "FILE_RECEPTION"],
+          "evidenceKind": "AUTOMATED",
+          "environment": {"os": "demo", "architecture": "x64"},
+          "reference": "demo://attempt-a/regressions",
+          "synthetic": false
+        }
+      ]
+    }
+  },
+  "attemptB": {
+    "candidateSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "createdAt": "2026-08-30T20:10:00Z",
+    "response": {
+      "contributor": {
+        "name": "simulated-agent-b",
+        "provider": "demo",
+        "version": "0.1"
+      },
+      "hypothesis": "A minimal configuration change will preserve messaging.",
+      "strategy": "Preserve all known-good behavior but leave the target unresolved.",
+      "changedFiles": ["src/printing/config.py"],
+      "rollbackReference": "demo-revert-b",
+      "capabilityChanges": [
+        {
+          "capabilityId": "PRINT_DUPLEX",
+          "stableStatus": "KNOWN_BAD",
+          "candidateStatus": "FAIL"
+        },
+        {
+          "capabilityId": "WHATSAPP_QR",
+          "stableStatus": "KNOWN_GOOD",
+          "candidateStatus": "PASS"
+        },
+        {
+          "capabilityId": "FILE_RECEPTION",
+          "stableStatus": "KNOWN_GOOD",
+          "candidateStatus": "PASS"
+        }
+      ],
+      "evidenceClaims": [
+        {
+          "capabilityIds": ["PRINT_DUPLEX", "WHATSAPP_QR", "FILE_RECEPTION"],
+          "evidenceKind": "AUTOMATED",
+          "environment": {"os": "demo", "architecture": "x64"},
+          "reference": "demo://attempt-b/contracts",
+          "synthetic": false
+        }
+      ]
+    }
+  },
+  "reconciliation": {
+    "candidateSha": "cccccccccccccccccccccccccccccccccccccccc",
+    "createdAt": "2026-08-30T20:15:00Z",
+    "response": {
+      "contributor": {
+        "name": "simulated-reconciliation-agent",
+        "provider": "demo",
+        "version": "0.1"
+      },
+      "hypothesis": "A capability-scoped transplant can preserve messaging and add duplex.",
+      "strategy": "Start from STABLE and transplant only the verified printing capability.",
+      "changedFiles": ["src/printing/reconciliation_bridge.py"],
+      "rollbackReference": "demo-revert-reconciliation",
+      "capabilityChanges": [
+        {
+          "capabilityId": "PRINT_DUPLEX",
+          "stableStatus": "KNOWN_BAD",
+          "candidateStatus": "PASS"
+        },
+        {
+          "capabilityId": "WHATSAPP_QR",
+          "stableStatus": "KNOWN_GOOD",
+          "candidateStatus": "PASS"
+        },
+        {
+          "capabilityId": "FILE_RECEPTION",
+          "stableStatus": "KNOWN_GOOD",
+          "candidateStatus": "PASS"
+        }
+      ],
+      "evidenceClaims": [
+        {
+          "capabilityIds": ["PRINT_DUPLEX", "WHATSAPP_QR", "FILE_RECEPTION"],
+          "evidenceKind": "AUTOMATED",
+          "environment": {"os": "demo", "architecture": "x64"},
+          "reference": "demo://reconciliation/contracts",
+          "synthetic": false
+        }
+      ]
+    }
+  }
+}
