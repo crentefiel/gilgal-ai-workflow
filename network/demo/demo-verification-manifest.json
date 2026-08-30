@@ -1,0 +1,80 @@
+{
+  "verifier": "DEMO_FIXTURE_VERIFIER",
+  "warning": "Simulation only. Exact full-claim matches are not real-world evidence.",
+  "entries": [
+    {
+      "candidateSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "capabilityIds": [
+        "PRINT_DUPLEX"
+      ],
+      "evidenceKind": "AUTOMATED",
+      "result": "PASS",
+      "environment": {
+        "os": "demo",
+        "architecture": "x64"
+      },
+      "reference": "demo://attempt-a/duplex",
+      "synthetic": false
+    },
+    {
+      "candidateSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "capabilityIds": [
+        "WHATSAPP_QR",
+        "FILE_RECEPTION"
+      ],
+      "evidenceKind": "AUTOMATED",
+      "result": "FAIL",
+      "environment": {
+        "os": "demo",
+        "architecture": "x64"
+      },
+      "reference": "demo://attempt-a/regressions",
+      "synthetic": false
+    },
+    {
+      "candidateSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "capabilityIds": [
+        "PRINT_DUPLEX"
+      ],
+      "evidenceKind": "AUTOMATED",
+      "result": "FAIL",
+      "environment": {
+        "os": "demo",
+        "architecture": "x64"
+      },
+      "reference": "demo://attempt-b/duplex",
+      "synthetic": false
+    },
+    {
+      "candidateSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "capabilityIds": [
+        "WHATSAPP_QR",
+        "FILE_RECEPTION"
+      ],
+      "evidenceKind": "AUTOMATED",
+      "result": "PASS",
+      "environment": {
+        "os": "demo",
+        "architecture": "x64"
+      },
+      "reference": "demo://attempt-b/preservation",
+      "synthetic": false
+    },
+    {
+      "candidateSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "capabilityIds": [
+        "PRINT_DUPLEX",
+        "WHATSAPP_QR",
+        "FILE_RECEPTION"
+      ],
+      "evidenceKind": "AUTOMATED",
+      "result": "PASS",
+      "environment": {
+        "os": "demo",
+        "architecture": "x64"
+      },
+      "reference": "demo://reconciliation/contracts",
+      "synthetic": false
+    }
+  ]
+}
