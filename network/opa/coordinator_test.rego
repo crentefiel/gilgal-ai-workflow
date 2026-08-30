@@ -7,7 +7,7 @@ sha_a := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 sha_b := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 sha_c := "cccccccccccccccccccccccccccccccccccccccc"
 
-verified_evidence(candidate_sha, capability_id) := {
+verified_evidence(candidate_sha, capability_id, result) := {
 	"schemaVersion": "0.1",
 	"id": sprintf("EVIDENCE-%s", [capability_id]),
 	"createdAt": "2026-08-30T19:00:00Z",
@@ -18,6 +18,7 @@ verified_evidence(candidate_sha, capability_id) := {
 	"capabilityIds": [capability_id],
 	"evidenceKind": "AUTOMATED",
 	"integrity": "VERIFIED",
+	"result": result,
 	"environment": {"os": "ubuntu", "architecture": "x64"},
 	"reference": "ci://verified",
 	"synthetic": false,
@@ -34,6 +35,7 @@ claimed_human(candidate_sha, capability_id) := {
 	"capabilityIds": [capability_id],
 	"evidenceKind": "HUMAN",
 	"integrity": "CLAIMED",
+	"result": "PENDING",
 	"environment": {"os": "Windows", "architecture": "x64"},
 	"reference": "AWAITING_HUMAN_TEST",
 	"synthetic": false,
@@ -51,6 +53,7 @@ change(id, stable, candidate, mandatory, target) := {
 clean_candidate := {
 	"attemptId": "ATTEMPT-CLEAN-001",
 	"candidateSha": sha_a,
+	"requiredEvidenceKinds": ["AUTOMATED"],
 	"capabilityDiff": {
 		"changes": [
 			change("WHATSAPP_QR", "KNOWN_GOOD", "PASS", true, false),
@@ -58,14 +61,15 @@ clean_candidate := {
 		],
 	},
 	"evidence": [
-		verified_evidence(sha_a, "WHATSAPP_QR"),
-		verified_evidence(sha_a, "PRINT_DUPLEX"),
+		verified_evidence(sha_a, "WHATSAPP_QR", "PASS"),
+		verified_evidence(sha_a, "PRINT_DUPLEX", "PASS"),
 	],
 }
 
 regression_candidate := {
 	"attemptId": "ATTEMPT-REGRESSION-001",
 	"candidateSha": sha_b,
+	"requiredEvidenceKinds": ["AUTOMATED"],
 	"capabilityDiff": {
 		"changes": [
 			change("WHATSAPP_QR", "KNOWN_GOOD", "FAIL", true, false),
@@ -73,14 +77,15 @@ regression_candidate := {
 		],
 	},
 	"evidence": [
-		verified_evidence(sha_b, "WHATSAPP_QR"),
-		verified_evidence(sha_b, "PRINT_DUPLEX"),
+		verified_evidence(sha_b, "WHATSAPP_QR", "FAIL"),
+		verified_evidence(sha_b, "PRINT_DUPLEX", "PASS"),
 	],
 }
 
 wrong_sha_candidate := {
 	"attemptId": "ATTEMPT-WRONG-SHA-001",
 	"candidateSha": sha_c,
+	"requiredEvidenceKinds": ["AUTOMATED"],
 	"capabilityDiff": {
 		"changes": [
 			change("WHATSAPP_QR", "KNOWN_GOOD", "PASS", true, false),
@@ -88,14 +93,15 @@ wrong_sha_candidate := {
 		],
 	},
 	"evidence": [
-		verified_evidence(sha_b, "WHATSAPP_QR"),
-		verified_evidence(sha_b, "PRINT_DUPLEX"),
+		verified_evidence(sha_b, "WHATSAPP_QR", "PASS"),
+		verified_evidence(sha_b, "PRINT_DUPLEX", "PASS"),
 	],
 }
 
 pending_human_candidate := {
 	"attemptId": "ATTEMPT-PENDING-001",
 	"candidateSha": sha_c,
+	"requiredEvidenceKinds": ["AUTOMATED", "HUMAN"],
 	"capabilityDiff": {
 		"changes": [
 			change("WHATSAPP_QR", "KNOWN_GOOD", "PASS", true, false),
@@ -103,7 +109,7 @@ pending_human_candidate := {
 		],
 	},
 	"evidence": [
-		verified_evidence(sha_c, "WHATSAPP_QR"),
+		verified_evidence(sha_c, "WHATSAPP_QR", "PASS"),
 		claimed_human(sha_c, "PRINT_DUPLEX"),
 	],
 }
