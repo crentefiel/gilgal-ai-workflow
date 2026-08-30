@@ -35,6 +35,11 @@ package network
 	status:    "CLAIMED"
 }
 
+#BaselineCapability: {
+	capabilityId: #Identifier
+	status:       #CapabilityState
+}
+
 #Task: {
 	#RecordBase
 	kind:             "TASK"
@@ -44,6 +49,7 @@ package network
 	expectedBehavior: #NonEmpty
 	targetCapabilities: [#Identifier, ...#Identifier]
 	preservedCapabilities: [#Identifier, ...#Identifier]
+	baselineCapabilities: [#BaselineCapability, ...#BaselineCapability]
 	allowedScope: [#NonEmpty, ...#NonEmpty]
 	forbiddenScope: [...#NonEmpty]
 	requiredEvidenceKinds: [#EvidenceKind, ...#EvidenceKind]
