@@ -4,10 +4,11 @@ package network
 #Identifier: string & =~"^[A-Z0-9][A-Z0-9._:-]{2,127}$"
 #SHA: string & =~"^[a-f0-9]{40}$"
 #SHA256: string & =~"^[a-f0-9]{64}$"
-#Timestamp: string & =~"^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+#Timestamp: string & =~"^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$"
 #CapabilityState: "KNOWN_GOOD" | "KNOWN_BAD" | "UNKNOWN" | "PENDING" | "NOT_TESTED" | "PASS" | "FAIL"
 #EvidenceKind: "AUTOMATED" | "INTEGRATION" | "PACKAGED" | "PHYSICAL" | "HUMAN"
 #EvidenceIntegrity: "VERIFIED" | "CLAIMED" | "TAINTED" | "STALE"
+#EvidenceResult: "PASS" | "FAIL" | "PENDING"
 #GateOutcome: "PROMOTABLE" | "BLOCKED" | "PENDING_HUMAN_EVIDENCE" | "REGRESSION_QUARANTINE" | "NO_WINNER"
 
 #RecordBase: {
@@ -25,12 +26,18 @@ package network
 	configSha256?: #SHA256
 }
 
-#HumanApproval: {
+#HumanApprovalClaim: {
 	actor:     #NonEmpty
 	actorType: "HUMAN"
 	rationale: #NonEmpty
 	reference: #NonEmpty
 	createdAt: #Timestamp
+	status:    "CLAIMED"
+}
+
+#BaselineCapability: {
+	capabilityId: #Identifier
+	status:       #CapabilityState
 }
 
 #Task: {
@@ -42,6 +49,7 @@ package network
 	expectedBehavior: #NonEmpty
 	targetCapabilities: [#Identifier, ...#Identifier]
 	preservedCapabilities: [#Identifier, ...#Identifier]
+	baselineCapabilities: [#BaselineCapability, ...#BaselineCapability]
 	allowedScope: [#NonEmpty, ...#NonEmpty]
 	forbiddenScope: [...#NonEmpty]
 	requiredEvidenceKinds: [#EvidenceKind, ...#EvidenceKind]
@@ -100,18 +108,19 @@ package network
 	capabilityIds: [#Identifier, ...#Identifier]
 	evidenceKind: #EvidenceKind
 	integrity:    #EvidenceIntegrity
+	result:       #EvidenceResult
 	environment:  #Environment
 	reference:    #NonEmpty
 	synthetic:    bool | *false
 	artifactSha256?: #SHA256
-	humanApproval?:  #HumanApproval
+	humanApprovalClaim?: #HumanApprovalClaim
 
 	if synthetic {
 		integrity: "TAINTED"
 	}
 
-	if evidenceKind == "HUMAN" && integrity == "VERIFIED" {
-		humanApproval: #HumanApproval
+	if evidenceKind == "HUMAN" {
+		integrity: "CLAIMED" | "TAINTED" | "STALE"
 	}
 
 	if evidenceKind == "PACKAGED" && integrity == "VERIFIED" {
@@ -152,14 +161,8 @@ package network
 		actorType: "AGENT" | "HUMAN"
 		provider?: #NonEmpty
 	}
-	disposition: "COMMENTED" | "APPROVED" | "CHANGES_REQUESTED"
+	disposition: "COMMENTED" | "CHANGES_REQUESTED"
 	findings: [...#ReviewFinding]
-	humanApproval?: #HumanApproval
-
-	if disposition == "APPROVED" {
-		reviewer: actorType: "HUMAN"
-		humanApproval: #HumanApproval
-	}
 }
 
 #GateDecision: {
