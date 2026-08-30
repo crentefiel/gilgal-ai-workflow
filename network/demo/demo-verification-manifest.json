@@ -1,0 +1,26 @@
+{
+  "verifier": "DEMO_FIXTURE_VERIFIER",
+  "warning": "Simulation only. These entries are not real-world evidence.",
+  "entries": [
+    {
+      "candidateSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "reference": "demo://attempt-a/duplex",
+      "capabilityIds": ["PRINT_DUPLEX"]
+    },
+    {
+      "candidateSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "reference": "demo://attempt-a/regressions",
+      "capabilityIds": ["WHATSAPP_QR", "FILE_RECEPTION"]
+    },
+    {
+      "candidateSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "reference": "demo://attempt-b/contracts",
+      "capabilityIds": ["PRINT_DUPLEX", "WHATSAPP_QR", "FILE_RECEPTION"]
+    },
+    {
+      "candidateSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "reference": "demo://reconciliation/contracts",
+      "capabilityIds": ["PRINT_DUPLEX", "WHATSAPP_QR", "FILE_RECEPTION"]
+    }
+  ]
+}
