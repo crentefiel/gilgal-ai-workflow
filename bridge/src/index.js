@@ -23,10 +23,25 @@ function errorResult(error) {
 }
 
 async function git(root, args) {
-  const { stdout } = await execFileAsync("git", ["-C", root, ...args], {
+  const safeGitArgs = [
+    "--no-optional-locks",
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.untrackedCache=false",
+    "-C",
+    root,
+    ...args
+  ];
+  const { stdout } = await execFileAsync("git", safeGitArgs, {
     encoding: "utf8",
     maxBuffer: MAX_TEXT_OUTPUT,
-    windowsHide: true
+    windowsHide: true,
+    env: {
+      ...process.env,
+      GIT_OPTIONAL_LOCKS: "0",
+      GIT_EXTERNAL_DIFF: ""
+    }
   });
   return stdout.trim();
 }
@@ -169,7 +184,7 @@ async function buildServer() {
         } catch {
           safe = await guard.resolveDirectory(diffPath);
         }
-        const args = ["diff", "--no-ext-diff", "--no-color"];
+        const args = ["diff", "--no-ext-diff", "--no-textconv", "--no-color"];
         if (staged) args.push("--cached");
         args.push("--", safe.relativePath || ".");
         return textResult({
