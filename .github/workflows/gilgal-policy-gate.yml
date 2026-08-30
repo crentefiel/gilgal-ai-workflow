@@ -37,8 +37,8 @@ jobs:
         with:
           version: latest
 
-      - name: Format check
-        run: opa fmt --fail policy/opa
+      - name: Strict policy check
+        run: opa check --strict policy/opa
 
       - name: Run policy contract tests
         run: opa test policy/opa -v
