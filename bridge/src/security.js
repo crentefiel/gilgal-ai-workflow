@@ -76,6 +76,10 @@ export async function createWorkspaceGuard({
       throw new Error("GILGAL_SYMLINK_ESCAPE_DENIED");
     }
 
+    const resolvedRelative = path.relative(realRoot, resolved);
+    assertNonSecret(resolvedRelative);
+    assertAllowedPrefix(resolvedRelative, allowedPrefixes);
+
     const info = await stat(resolved);
     if (expectFile && !info.isFile()) {
       throw new Error("GILGAL_EXPECTED_FILE");
