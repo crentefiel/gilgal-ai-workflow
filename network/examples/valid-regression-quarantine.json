@@ -26,7 +26,21 @@
       "HUMAN"
     ],
     "physicalEffects": true,
-    "humanEvidenceRequired": true
+    "humanEvidenceRequired": true,
+    "baselineCapabilities": [
+      {
+        "capabilityId": "WHATSAPP_QR",
+        "status": "KNOWN_GOOD"
+      },
+      {
+        "capabilityId": "FILE_RECEPTION",
+        "status": "KNOWN_GOOD"
+      },
+      {
+        "capabilityId": "PRINT_DUPLEX",
+        "status": "KNOWN_BAD"
+      }
+    ]
   },
   "attempts": [
     {
