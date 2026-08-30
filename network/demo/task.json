@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "0.1",
+  "id": "TASK-NETWORK-DEMO-001",
+  "createdAt": "2026-08-30T20:00:00Z",
+  "kind": "TASK",
+  "stableSha": "1111111111111111111111111111111111111111",
+  "title": "Preserve messaging while adding correct duplex output",
+  "problem": "STABLE preserves messaging and file reception but lacks duplex output.",
+  "expectedBehavior": "WhatsApp, file reception and duplex output all pass in one candidate.",
+  "targetCapabilities": ["PRINT_DUPLEX"],
+  "preservedCapabilities": ["WHATSAPP_QR", "FILE_RECEPTION"],
+  "allowedScope": ["src/printing/**"],
+  "forbiddenScope": ["src/whatsapp/**", "src/storage/**"],
+  "requiredEvidenceKinds": ["AUTOMATED"],
+  "physicalEffects": false,
+  "humanEvidenceRequired": false
+}
