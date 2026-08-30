@@ -25,6 +25,8 @@ CAPABILITY_STATES = {
     "FAIL",
 }
 EVIDENCE_KINDS = {"AUTOMATED", "INTEGRATION", "PACKAGED", "PHYSICAL", "HUMAN"}
+EVIDENCE_RESULTS = {"PASS", "FAIL", "PENDING"}
+ENVIRONMENT_FIELDS = {"os", "architecture", "runtime", "driver", "device", "configSha256"}
 FORBIDDEN_AGENT_FIELDS = {
     "candidateSha",
     "stableSha",
@@ -32,6 +34,7 @@ FORBIDDEN_AGENT_FIELDS = {
     "humanApproved",
     "promotionAllowed",
     "gateDecision",
+    "stableStatus",
 }
 
 
@@ -93,9 +96,23 @@ def validate_task(task: dict[str, Any]) -> None:
     require(task.get("schemaVersion") == "0.1", "task.schemaVersion must be 0.1")
     validate_sha(require_non_empty(task.get("stableSha"), "task.stableSha"), "task.stableSha")
     require_identifier(task.get("id"), "task.id")
-    for field in ("targetCapabilities", "preservedCapabilities", "allowedScope"):
+    for field in ("targetCapabilities", "preservedCapabilities", "allowedScope", "baselineCapabilities"):
         values = task.get(field)
         require(isinstance(values, list) and len(values) > 0, f"task.{field} must be a non-empty list")
+
+    baseline_ids: set[str] = set()
+    for index, baseline in enumerate(task["baselineCapabilities"]):
+        require(isinstance(baseline, dict), f"task.baselineCapabilities[{index}] must be an object")
+        capability_id = require_identifier(
+            baseline.get("capabilityId"),
+            f"task.baselineCapabilities[{index}].capabilityId",
+        )
+        require(capability_id not in baseline_ids, f"duplicate baseline capability: {capability_id}")
+        require(baseline.get("status") in CAPABILITY_STATES, f"invalid baseline status: {capability_id}")
+        baseline_ids.add(capability_id)
+
+    required_ids = set(task["targetCapabilities"]) | set(task["preservedCapabilities"])
+    require(required_ids <= baseline_ids, "every target and preserved capability needs a trusted baseline")
 
 
 def validate_scope(changed_files: list[str], task: dict[str, Any]) -> None:
@@ -114,6 +131,7 @@ def normalize_capability_changes(
     require(isinstance(values, list) and len(values) > 0, "capabilityChanges must be a non-empty list")
     task_targets = set(task["targetCapabilities"])
     task_preserved = set(task["preservedCapabilities"])
+    trusted_baseline = {item["capabilityId"]: item["status"] for item in task["baselineCapabilities"]}
     output: list[dict[str, Any]] = []
     seen: set[str] = set()
 
@@ -122,9 +140,9 @@ def normalize_capability_changes(
         capability_id = require_identifier(value.get("capabilityId"), f"capabilityChanges[{index}].capabilityId")
         require(capability_id not in seen, f"duplicate capability change: {capability_id}")
         seen.add(capability_id)
-        stable_status = value.get("stableStatus")
+        stable_status = trusted_baseline.get(capability_id)
+        require(stable_status is not None, f"capability missing from trusted baseline: {capability_id}")
         candidate_status = value.get("candidateStatus")
-        require(stable_status in CAPABILITY_STATES, f"invalid stableStatus for {capability_id}")
         require(candidate_status in CAPABILITY_STATES, f"invalid candidateStatus for {capability_id}")
         output.append(
             {
@@ -167,13 +185,27 @@ def normalize_evidence(
         capability_ids = claim.get("capabilityIds")
         require(isinstance(capability_ids, list) and capability_ids, f"evidenceClaims[{index}].capabilityIds is required")
         for capability_id in capability_ids:
+            capability_id = require_identifier(capability_id, f"evidenceClaims[{index}].capabilityIds[]")
             require(capability_id in known_capabilities, f"evidence references unknown capability: {capability_id}")
 
-        environment = claim.get("environment")
-        require(isinstance(environment, dict), f"evidenceClaims[{index}].environment must be an object")
-        require_non_empty(environment.get("os"), f"evidenceClaims[{index}].environment.os")
-        require_non_empty(environment.get("architecture"), f"evidenceClaims[{index}].environment.architecture")
+        environment_input = claim.get("environment")
+        require(isinstance(environment_input, dict), f"evidenceClaims[{index}].environment must be an object")
+        unknown_environment_fields = set(environment_input) - ENVIRONMENT_FIELDS
+        require(
+            not unknown_environment_fields,
+            f"evidenceClaims[{index}].environment contains forbidden fields: {sorted(unknown_environment_fields)}",
+        )
+        environment = {
+            key: require_non_empty(value, f"evidenceClaims[{index}].environment.{key}")
+            for key, value in environment_input.items()
+        }
+        require("os" in environment, f"evidenceClaims[{index}].environment.os is required")
+        require("architecture" in environment, f"evidenceClaims[{index}].environment.architecture is required")
+        if "configSha256" in environment:
+            require(bool(SHA256_RE.fullmatch(environment["configSha256"])), "invalid environment.configSha256")
 
+        evidence_result = claim.get("result")
+        require(evidence_result in EVIDENCE_RESULTS, f"invalid evidence result at evidenceClaims[{index}]")
         synthetic = bool(claim.get("synthetic", False))
         normalized = {
             "schemaVersion": "0.1",
@@ -186,6 +218,7 @@ def normalize_evidence(
             "capabilityIds": capability_ids,
             "evidenceKind": evidence_kind,
             "integrity": "TAINTED" if synthetic else "CLAIMED",
+            "result": evidence_result,
             "environment": environment,
             "reference": require_non_empty(claim.get("reference"), f"evidenceClaims[{index}].reference"),
             "synthetic": synthetic,
