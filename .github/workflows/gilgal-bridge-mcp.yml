@@ -1,0 +1,55 @@
+name: GILGAL Bridge MCP
+
+on:
+  pull_request:
+    paths:
+      - "bridge/**"
+      - ".github/workflows/gilgal-bridge-mcp.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "bridge/**"
+      - ".github/workflows/gilgal-bridge-mcp.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-bridge:
+    name: bridge/read-only (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        working-directory: bridge
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install exact direct dependencies without lifecycle scripts
+        run: npm install --ignore-scripts --package-lock=false
+
+      - name: Run security tests
+        run: npm test
+
+      - name: Check server syntax
+        run: node --check src/index.js
+
+      - name: Confirm read-only tool surface
+        shell: bash
+        run: |
+          set -eu
+          ! grep -E 'registerTool\([[:space:]]*"(write|apply|commit|push|merge|exec|shell)' src/index.js
+          echo "No write, shell, commit, push or merge MCP tool is registered."
