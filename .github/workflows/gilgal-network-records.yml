@@ -1,0 +1,55 @@
+name: GILGAL Network Records
+
+on:
+  pull_request:
+    paths:
+      - "network/**"
+      - ".github/workflows/gilgal-network-records.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "network/**"
+      - ".github/workflows/gilgal-network-records.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-record-contracts:
+    name: gilgal/network-record-contracts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v6
+
+      - name: Setup CUE
+        uses: cue-lang/setup-cue@v1.0.1
+        with:
+          version: latest
+
+      - name: Check schema
+        run: cue vet -c network/cue/records.cue
+
+      - name: Accept valid seven-record bundle
+        run: |
+          cue vet -c \
+            network/cue/records.cue \
+            network/examples/valid-regression-quarantine.json \
+            -d '#NetworkBundle'
+
+      - name: Reject unauthenticated human approval
+        run: |
+          if cue vet -c \
+            network/cue/records.cue \
+            network/examples/invalid-human-self-approval.json \
+            -d '#Evidence'; then
+            echo "::error::Invalid human VERIFIED evidence was accepted"
+            exit 1
+          fi
+          echo "Invalid human VERIFIED evidence was correctly rejected"
+
+      - name: Confirm safety boundary
+        run: echo "This workflow validates records only; it cannot merge, approve or perform physical actions."
