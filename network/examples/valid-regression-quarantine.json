@@ -1,0 +1,172 @@
+{
+  "task": {
+    "schemaVersion": "0.1",
+    "id": "TASK-DEMO-001",
+    "createdAt": "2026-08-30T18:00:00Z",
+    "kind": "TASK",
+    "stableSha": "1111111111111111111111111111111111111111",
+    "title": "Preserve messaging while improving duplex printing",
+    "problem": "The candidate improves duplex transport but regresses messaging.",
+    "expectedBehavior": "Messaging, file reception and correct duplex output all pass.",
+    "targetCapabilities": ["PRINT_DUPLEX"],
+    "preservedCapabilities": ["WHATSAPP_QR", "FILE_RECEPTION"],
+    "allowedScope": ["src/printing/**"],
+    "forbiddenScope": ["src/whatsapp/**"],
+    "requiredEvidenceKinds": ["AUTOMATED", "HUMAN"],
+    "physicalEffects": true,
+    "humanEvidenceRequired": true
+  },
+  "attempts": [
+    {
+      "schemaVersion": "0.1",
+      "id": "ATTEMPT-DEMO-001",
+      "createdAt": "2026-08-30T18:05:00Z",
+      "kind": "AGENT_ATTEMPT",
+      "taskId": "TASK-DEMO-001",
+      "stableSha": "1111111111111111111111111111111111111111",
+      "candidateSha": "2222222222222222222222222222222222222222",
+      "contributor": {
+        "name": "example-agent",
+        "actorType": "AGENT",
+        "provider": "provider-neutral",
+        "version": "demo-0.1"
+      },
+      "hypothesis": "The printing path needs a capability-scoped integration.",
+      "strategy": "Change only the allowed printing scope and preserve messaging contracts.",
+      "changedFiles": ["src/printing/bridge.ts"],
+      "targetCapabilities": ["PRINT_DUPLEX"],
+      "failedStrategyIds": [],
+      "rollbackReference": "git revert example"
+    }
+  ],
+  "capabilityDiffs": [
+    {
+      "schemaVersion": "0.1",
+      "id": "DIFF-DEMO-001",
+      "createdAt": "2026-08-30T18:10:00Z",
+      "kind": "CAPABILITY_DIFF",
+      "taskId": "TASK-DEMO-001",
+      "attemptId": "ATTEMPT-DEMO-001",
+      "candidateSha": "2222222222222222222222222222222222222222",
+      "changes": [
+        {
+          "capabilityId": "WHATSAPP_QR",
+          "mandatory": true,
+          "target": false,
+          "stableStatus": "KNOWN_GOOD",
+          "candidateStatus": "FAIL",
+          "evidenceIds": ["EVIDENCE-DEMO-001"]
+        },
+        {
+          "capabilityId": "PRINT_DUPLEX",
+          "mandatory": true,
+          "target": true,
+          "stableStatus": "KNOWN_BAD",
+          "candidateStatus": "PENDING",
+          "evidenceIds": ["EVIDENCE-DEMO-002"]
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "schemaVersion": "0.1",
+      "id": "EVIDENCE-DEMO-001",
+      "createdAt": "2026-08-30T18:12:00Z",
+      "kind": "EVIDENCE",
+      "taskId": "TASK-DEMO-001",
+      "attemptId": "ATTEMPT-DEMO-001",
+      "candidateSha": "2222222222222222222222222222222222222222",
+      "capabilityIds": ["WHATSAPP_QR"],
+      "evidenceKind": "AUTOMATED",
+      "integrity": "VERIFIED",
+      "environment": {
+        "os": "ubuntu",
+        "architecture": "x64",
+        "runtime": "node-22"
+      },
+      "reference": "ci://example/run/1",
+      "synthetic": false
+    },
+    {
+      "schemaVersion": "0.1",
+      "id": "EVIDENCE-DEMO-002",
+      "createdAt": "2026-08-30T18:15:00Z",
+      "kind": "EVIDENCE",
+      "taskId": "TASK-DEMO-001",
+      "attemptId": "ATTEMPT-DEMO-001",
+      "candidateSha": "2222222222222222222222222222222222222222",
+      "capabilityIds": ["PRINT_DUPLEX"],
+      "evidenceKind": "HUMAN",
+      "integrity": "CLAIMED",
+      "environment": {
+        "os": "Windows",
+        "architecture": "x64",
+        "device": "example-printer"
+      },
+      "reference": "AWAITING_HUMAN_PHYSICAL_RETEST",
+      "synthetic": false
+    }
+  ],
+  "failureMemory": [
+    {
+      "schemaVersion": "0.1",
+      "id": "FAILURE-DEMO-001",
+      "createdAt": "2026-08-30T18:20:00Z",
+      "kind": "FAILURE_MEMORY",
+      "taskId": "TASK-DEMO-001",
+      "attemptId": "ATTEMPT-DEMO-001",
+      "candidateSha": "2222222222222222222222222222222222222222",
+      "hypothesis": "A broad integration would preserve unrelated capabilities.",
+      "strategy": "Modified printing and messaging in one attempt.",
+      "result": "REGRESSION",
+      "evidenceIds": ["EVIDENCE-DEMO-001"],
+      "reusableLesson": "Use a capability-scoped transplant from STABLE.",
+      "doNotRepeatWithout": "Messaging preservation evidence"
+    }
+  ],
+  "reviews": [
+    {
+      "schemaVersion": "0.1",
+      "id": "REVIEW-DEMO-001",
+      "createdAt": "2026-08-30T18:25:00Z",
+      "kind": "REVIEW",
+      "taskId": "TASK-DEMO-001",
+      "attemptId": "ATTEMPT-DEMO-001",
+      "reviewedSha": "2222222222222222222222222222222222222222",
+      "reviewer": {
+        "name": "review-agent",
+        "actorType": "AGENT",
+        "provider": "provider-neutral"
+      },
+      "disposition": "CHANGES_REQUESTED",
+      "findings": [
+        {
+          "severity": "P1",
+          "title": "Mandatory capability regressed",
+          "detail": "WHATSAPP_QR changed from KNOWN_GOOD to FAIL.",
+          "path": "src/printing/bridge.ts",
+          "evidenceIds": ["EVIDENCE-DEMO-001"]
+        }
+      ]
+    }
+  ],
+  "gateDecisions": [
+    {
+      "schemaVersion": "0.1",
+      "id": "GATE-DEMO-001",
+      "createdAt": "2026-08-30T18:30:00Z",
+      "kind": "GATE_DECISION",
+      "taskId": "TASK-DEMO-001",
+      "attemptId": "ATTEMPT-DEMO-001",
+      "candidateSha": "2222222222222222222222222222222222222222",
+      "policyVersion": "network-demo-0.1",
+      "inputSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "outcome": "REGRESSION_QUARANTINE",
+      "promotionAllowed": false,
+      "reasons": ["WHATSAPP_QR"],
+      "evidenceIds": ["EVIDENCE-DEMO-001"],
+      "recommendedAction": "CREATE_RECONCILIATION_CANDIDATE"
+    }
+  ]
+}

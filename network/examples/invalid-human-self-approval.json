@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "0.1",
+  "id": "EVIDENCE-INVALID-001",
+  "createdAt": "2026-08-30T18:15:00Z",
+  "kind": "EVIDENCE",
+  "taskId": "TASK-DEMO-001",
+  "attemptId": "ATTEMPT-DEMO-001",
+  "candidateSha": "2222222222222222222222222222222222222222",
+  "capabilityIds": ["PRINT_DUPLEX"],
+  "evidenceKind": "HUMAN",
+  "integrity": "VERIFIED",
+  "environment": {
+    "os": "Windows",
+    "architecture": "x64",
+    "device": "example-printer"
+  },
+  "reference": "agent-asserted-human-pass",
+  "synthetic": false
+}
