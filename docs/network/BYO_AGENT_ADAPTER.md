@@ -15,7 +15,7 @@ The adapter accepts claims and structure, but it does not let an agent decide:
 - Gate outcome;
 - promotion permission.
 
-The candidate SHA and timestamp come from the invoking coordinator. The STABLE SHA and capability requirements come from the Task record.
+The candidate SHA and timestamp come from the invoking coordinator. The STABLE SHA, baseline capability states and capability requirements come from the trusted Task record.
 
 ## Usage
 
@@ -46,12 +46,10 @@ The adapter uses only the Python standard library.
   "capabilityChanges": [
     {
       "capabilityId": "PRINT_DUPLEX",
-      "stableStatus": "KNOWN_BAD",
       "candidateStatus": "PASS"
     },
     {
       "capabilityId": "WHATSAPP_QR",
-      "stableStatus": "KNOWN_GOOD",
       "candidateStatus": "PASS"
     }
   ],
@@ -64,6 +62,7 @@ The adapter uses only the Python standard library.
         "architecture": "x64"
       },
       "reference": "local://test-output",
+      "result": "PASS",
       "synthetic": false
     }
   ]
@@ -77,6 +76,8 @@ The adapter uses only the Python standard library.
 - A later independent verifier may create new `VERIFIED` evidence.
 - The adapter rejects agent-supplied `candidateSha`, `stableSha`, human approval, Gate decisions and promotion permission.
 - Changed paths must fit the Task's allowed scope and must not fit forbidden scope.
+- Stable capability status is derived from the Task baseline, never from the agent.
+- Environment fields are allowlisted so secrets or arbitrary nested data cannot cross the boundary.
 - Every target and preserved capability must appear in the Capability Diff.
 - IDs are deterministic hashes of normalized inputs.
 - Provider API keys are neither accepted nor written.
