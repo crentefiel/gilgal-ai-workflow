@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "stable": {
+    "sha": "fd97d97051aa88a04eb28b2ecc67197b362430ba"
+  },
+  "candidate": {
+    "sha": "37eba690d81370fe28fc96e36f9639bdb2a0791c"
+  },
+  "evidenceIdentity": {
+    "candidateSha": "37eba690d81370fe28fc96e36f9639bdb2a0791c",
+    "environmentVerified": true,
+    "artifactProvenanceVerified": false
+  },
+  "capabilities": [
+    {
+      "id": "WHATSAPP_QR",
+      "description": "WhatsApp QR and session remain stable",
+      "mandatory": true,
+      "stableStatus": "KNOWN_GOOD",
+      "candidateStatus": "FAIL",
+      "target": false,
+      "dependencies": ["STORAGE"],
+      "owners": ["src/main/whatsapp"],
+      "evidence": [],
+      "humanAcceptance": false,
+      "proofDebt": []
+    },
+    {
+      "id": "PRINT_DUPLEX",
+      "description": "One job prints correct content on both sides of one sheet",
+      "mandatory": true,
+      "stableStatus": "KNOWN_BAD",
+      "candidateStatus": "PENDING",
+      "target": true,
+      "dependencies": ["PDF_RENDER", "WINDOWS_SPOOLER"],
+      "owners": ["src/main/printing", "resources/bin/LanHousePrintBridge.exe"],
+      "evidence": [
+        {
+          "id": "HUMAN-PHYSICAL-CONTENT-RETEST",
+          "kind": "HUMAN",
+          "integrity": "CLAIMED",
+          "sha": "37eba690d81370fe28fc96e36f9639bdb2a0791c",
+          "environment": {
+            "os": "Windows",
+            "architecture": "x64",
+            "device": "RICOH Aficio SP 5210SF"
+          },
+          "reference": "AWAITING_HUMAN_PHYSICAL_RETEST",
+          "humanApproved": false,
+          "synthetic": false
+        }
+      ],
+      "humanAcceptance": false,
+      "proofDebt": [
+        {
+          "id": "BUILD_PROVENANCE",
+          "description": "Packaged executable is not cryptographically bound to the candidate SHA",
+          "critical": true,
+          "status": "OPEN",
+          "waivedByHuman": false
+        }
+      ]
+    }
+  ],
+  "scope": {
+    "contaminated": false,
+    "blastRadiusExceeded": false
+  },
+  "sideEffectPolicy": {
+    "physicalActionAuthorized": false,
+    "automatedPhysicalActions": 0
+  },
+  "targetImproved": true
+}
