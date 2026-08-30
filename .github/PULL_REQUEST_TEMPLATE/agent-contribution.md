@@ -91,13 +91,13 @@ An AI may report a human decision but cannot create, infer or authenticate one.
 
 ## Proposed Gate outcome
 
-- [ ] `PROMOTABLE`
-- [ ] `BLOCKED`
-- [ ] `PENDING_HUMAN_EVIDENCE`
-- [ ] `REGRESSION_QUARANTINE`
-- [ ] `NO_WINNER`
+Choose exactly one value:
 
-Explain why this outcome follows from capability records and verified evidence rather than from manually asserted aggregate booleans.
+`PROMOTABLE | BLOCKED | PENDING_HUMAN_EVIDENCE | REGRESSION_QUARANTINE | NO_WINNER`
+
+**Selected outcome:** 
+
+Explain why this single outcome follows from capability records and verified evidence rather than from manually asserted aggregate booleans.
 
 ## Safety confirmation
 
