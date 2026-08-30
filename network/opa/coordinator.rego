@@ -5,6 +5,7 @@ import rego.v1
 verified_evidence(candidate, capability_id) if {
 	some evidence in candidate.evidence
 	evidence.integrity == "VERIFIED"
+	evidence.result == "PASS"
 	evidence.candidateSha == candidate.candidateSha
 	capability_id in evidence.capabilityIds
 }
@@ -34,6 +35,19 @@ unverified_pass_claims(candidate) := [change.capabilityId |
 	not verified_evidence(candidate, change.capabilityId)
 ]
 
+verified_evidence_kind(candidate, required_kind) if {
+	some evidence in candidate.evidence
+	evidence.integrity == "VERIFIED"
+	evidence.result == "PASS"
+	evidence.candidateSha == candidate.candidateSha
+	evidence.evidenceKind == required_kind
+}
+
+missing_required_evidence_kinds(candidate) := [required_kind |
+	some required_kind in candidate.requiredEvidenceKinds
+	not verified_evidence_kind(candidate, required_kind)
+]
+
 target_improvements(candidate) := [change.capabilityId |
 	some change in candidate.capabilityDiff.changes
 	change.target == true
@@ -48,16 +62,21 @@ candidate_outcome(candidate) := "REGRESSION_QUARANTINE" if {
 } else := "PENDING_HUMAN_EVIDENCE" if {
 	count(pending_human_capabilities(candidate)) > 0
 } else := "BLOCKED" if {
-	count(unverified_pass_claims(candidate)) > 0
+	count(unverified_pass_claims(candidate)) + count(missing_required_evidence_kinds(candidate)) > 0
 } else := "NO_WINNER" if {
 	count(target_improvements(candidate)) == 0
 } else := "PROMOTABLE"
+
+blocked_reasons(candidate) := array.concat(
+	unverified_pass_claims(candidate),
+	missing_required_evidence_kinds(candidate),
+)
 
 candidate_reasons(candidate) := regressions(candidate) if {
 	candidate_outcome(candidate) == "REGRESSION_QUARANTINE"
 } else := pending_human_capabilities(candidate) if {
 	candidate_outcome(candidate) == "PENDING_HUMAN_EVIDENCE"
-} else := unverified_pass_claims(candidate) if {
+} else := blocked_reasons(candidate) if {
 	candidate_outcome(candidate) == "BLOCKED"
 } else := ["TARGET_CAPABILITY_NOT_PROVEN"] if {
 	candidate_outcome(candidate) == "NO_WINNER"
