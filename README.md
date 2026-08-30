@@ -360,6 +360,14 @@ This is a protocol proposal. The current Sentinel 0.2.0 reference implementation
 
 See [GILGAL 0.5 Capability-Aware Reconciliation](GILGAL_0_5_CAPABILITY_RECONCILIATION.md).
 
+## Evidence & Policy Engine prototype
+
+The GILGAL 0.5 candidate now has an executable policy prototype using CUE schemas and an OPA capability Gate. It also includes a manual GitHub-attested Sentinel build workflow.
+
+This is a prototype, not a claim that every GILGAL 0.5 rule is implemented. See [policy/README.md](policy/README.md).
+
+GILGAL explicitly acknowledges the technologies and research that influenced its synthesis. See [Influences and Prior Art](INFLUENCES_AND_PRIOR_ART.md).
+
 ## Documents
 
 - [GILGAL.md](GILGAL.md) — concept, origin and principles
