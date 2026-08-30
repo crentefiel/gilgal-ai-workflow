@@ -23,6 +23,10 @@ TASK = {
     "expectedBehavior": "Duplex passes while messaging remains available",
     "targetCapabilities": ["PRINT_DUPLEX"],
     "preservedCapabilities": ["WHATSAPP_QR"],
+    "baselineCapabilities": [
+        {"capabilityId": "PRINT_DUPLEX", "status": "KNOWN_BAD"},
+        {"capabilityId": "WHATSAPP_QR", "status": "KNOWN_GOOD"},
+    ],
     "allowedScope": ["src/printing/**"],
     "forbiddenScope": ["src/whatsapp/**"],
     "requiredEvidenceKinds": ["AUTOMATED"],
@@ -43,12 +47,10 @@ RESPONSE = {
     "capabilityChanges": [
         {
             "capabilityId": "PRINT_DUPLEX",
-            "stableStatus": "KNOWN_BAD",
             "candidateStatus": "PASS",
         },
         {
             "capabilityId": "WHATSAPP_QR",
-            "stableStatus": "KNOWN_GOOD",
             "candidateStatus": "PASS",
         },
     ],
@@ -61,6 +63,7 @@ RESPONSE = {
                 "architecture": "x64",
             },
             "reference": "local://test-output",
+            "result": "PASS",
             "synthetic": False,
         }
     ],
@@ -111,6 +114,27 @@ class ByoaAdapterTests(unittest.TestCase):
         response["capabilityChanges"] = response["capabilityChanges"][:1]
 
         with self.assertRaisesRegex(adapter.AdapterError, "missing preserved capability"):
+            adapter.adapt(copy.deepcopy(TASK), response, CANDIDATE_SHA, CREATED_AT)
+
+    def test_rejects_environment_secret_field(self):
+        response = copy.deepcopy(RESPONSE)
+        response["evidenceClaims"][0]["environment"]["apiKey"] = "must-not-pass"
+
+        with self.assertRaisesRegex(adapter.AdapterError, "forbidden fields"):
+            adapter.adapt(copy.deepcopy(TASK), response, CANDIDATE_SHA, CREATED_AT)
+
+    def test_rejects_non_string_capability_id(self):
+        response = copy.deepcopy(RESPONSE)
+        response["evidenceClaims"][0]["capabilityIds"] = [["PRINT_DUPLEX"]]
+
+        with self.assertRaises(adapter.AdapterError):
+            adapter.adapt(copy.deepcopy(TASK), response, CANDIDATE_SHA, CREATED_AT)
+
+    def test_agent_cannot_override_trusted_stable_status(self):
+        response = copy.deepcopy(RESPONSE)
+        response["capabilityChanges"][0]["stableStatus"] = "KNOWN_GOOD"
+
+        with self.assertRaisesRegex(adapter.AdapterError, "controlled by GILGAL"):
             adapter.adapt(copy.deepcopy(TASK), response, CANDIDATE_SHA, CREATED_AT)
 
     def test_ids_are_deterministic_for_same_input(self):
