@@ -31,7 +31,7 @@ jobs:
           version: latest
 
       - name: Check schema
-        run: cue vet -c network/cue/records.cue
+        run: cue vet network/cue/records.cue
 
       - name: Accept valid seven-record bundle
         run: |
