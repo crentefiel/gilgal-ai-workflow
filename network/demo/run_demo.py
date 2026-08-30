@@ -36,34 +36,35 @@ def normalize_candidate(task: dict[str, Any], fixture: dict[str, Any]) -> dict[s
     return {
         "attemptId": records["attempt"]["id"],
         "candidateSha": records["attempt"]["candidateSha"],
+        "requiredEvidenceKinds": task["requiredEvidenceKinds"],
         "capabilityDiff": records["capabilityDiff"],
         "evidence": records["evidence"],
     }
 
 
+def evidence_identity(value: dict[str, Any]) -> str:
+    complete_claim = {
+        "candidateSha": value["candidateSha"],
+        "capabilityIds": value["capabilityIds"],
+        "evidenceKind": value["evidenceKind"],
+        "result": value["result"],
+        "environment": value["environment"],
+        "reference": value["reference"],
+        "synthetic": value["synthetic"],
+    }
+    return json.dumps(complete_claim, sort_keys=True, separators=(",", ":"))
+
+
 def apply_demo_verification(
     candidate: dict[str, Any], manifest: dict[str, Any]
 ) -> dict[str, Any]:
-    """Promote exact fixture claims only. Never use this verifier for real evidence."""
+    """Promote exact full fixture claims only. Never use this verifier for real evidence."""
     output = copy.deepcopy(candidate)
-    allowed = {
-        (
-            entry["candidateSha"],
-            entry["reference"],
-            tuple(entry["capabilityIds"]),
-        )
-        for entry in manifest["entries"]
-    }
+    allowed = {evidence_identity(entry) for entry in manifest["entries"]}
 
     for evidence in output["evidence"]:
-        identity = (
-            evidence["candidateSha"],
-            evidence["reference"],
-            tuple(evidence["capabilityIds"]),
-        )
-        if identity in allowed:
+        if evidence_identity(evidence) in allowed:
             evidence["integrity"] = "VERIFIED"
-            evidence["verificationReference"] = "demo-manifest://exact-match"
     return output
 
 
