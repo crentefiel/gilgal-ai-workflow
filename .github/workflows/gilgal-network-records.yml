@@ -70,5 +70,8 @@ jobs:
       - name: Test BYO agent trust boundary
         run: python -m unittest discover -s network/adapters -p 'test_*.py' -v
 
+      - name: Run zero-server competing-agent demonstration
+        run: python network/demo/run_demo.py
+
       - name: Confirm safety boundary
         run: echo "This workflow validates records, decisions and adapter output only; it cannot merge, approve or perform physical actions."
