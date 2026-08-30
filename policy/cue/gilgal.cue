@@ -27,7 +27,7 @@ package gilgal
 	humanApproved: bool | *false
 	synthetic: bool | *false
 
-	if kind == "HUMAN" {
+	if kind == "HUMAN" && integrity == "VERIFIED" {
 		humanApproved: true
 	}
 
