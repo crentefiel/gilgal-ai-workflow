@@ -77,6 +77,50 @@ test("denies a symlink that escapes the workspace", async (t) => {
   );
 });
 
+test("reapplies secret rules to an in-workspace symlink target", async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  try {
+    await symlink(path.join(root, ".env"), path.join(root, "src", "printing", "public.txt"));
+  } catch (error) {
+    if (error && (error.code === "EPERM" || error.code === "EACCES")) {
+      t.skip("symlink creation is not permitted on this runner");
+      return;
+    }
+    throw error;
+  }
+
+  const guard = await createWorkspaceGuard({ root, allowedPrefixes: ["src/printing"] });
+  await assert.rejects(
+    () => guard.resolveFile("src/printing/public.txt"),
+    /GILGAL_SECRET_PATH_DENIED/
+  );
+});
+
+test("reapplies allowed scope to an in-workspace symlink target", async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, "private"), { recursive: true });
+  await writeFile(path.join(root, "private", "data.txt"), "private\n");
+
+  try {
+    await symlink(path.join(root, "private"), path.join(root, "src", "printing", "more"), "dir");
+  } catch (error) {
+    if (error && (error.code === "EPERM" || error.code === "EACCES")) {
+      t.skip("symlink creation is not permitted on this runner");
+      return;
+    }
+    throw error;
+  }
+
+  const guard = await createWorkspaceGuard({ root, allowedPrefixes: ["src/printing"] });
+  await assert.rejects(
+    () => guard.resolveFile("src/printing/more/data.txt"),
+    /GILGAL_PATH_OUTSIDE_ALLOWED_SCOPE/
+  );
+});
+
 test("denies oversized files", async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
