@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Provider-neutral boundary for turning an untrusted agent response into GILGAL records."""
+"""Provider-neutral boundary for turning an untrusted agent response into GILGAL records.
+
+Agent observations remain claims until an independent verifier creates trusted evidence.
+"""
 
 from __future__ import annotations
 
