@@ -33,7 +33,8 @@ package network
 	createdAt: #Timestamp
 }
 
-#Task: #RecordBase & {
+#Task: {
+	#RecordBase
 	kind:             "TASK"
 	stableSha:        #SHA
 	title:            #NonEmpty
@@ -52,7 +53,8 @@ package network
 	}
 }
 
-#AgentAttempt: #RecordBase & {
+#AgentAttempt: {
+	#RecordBase
 	kind:         "AGENT_ATTEMPT"
 	taskId:       #Identifier
 	stableSha:    #SHA
@@ -80,7 +82,8 @@ package network
 	evidenceIds:    [...#Identifier]
 }
 
-#CapabilityDiff: #RecordBase & {
+#CapabilityDiff: {
+	#RecordBase
 	kind:         "CAPABILITY_DIFF"
 	taskId:       #Identifier
 	attemptId:    #Identifier
@@ -88,7 +91,8 @@ package network
 	changes:      [#CapabilityChange, ...#CapabilityChange]
 }
 
-#Evidence: #RecordBase & {
+#Evidence: {
+	#RecordBase
 	kind:         "EVIDENCE"
 	taskId:       #Identifier
 	attemptId:    #Identifier
@@ -115,7 +119,8 @@ package network
 	}
 }
 
-#FailureMemory: #RecordBase & {
+#FailureMemory: {
+	#RecordBase
 	kind:          "FAILURE_MEMORY"
 	taskId:        #Identifier
 	attemptId:     #Identifier
@@ -136,7 +141,8 @@ package network
 	evidenceIds: [...#Identifier]
 }
 
-#Review: #RecordBase & {
+#Review: {
+	#RecordBase
 	kind:         "REVIEW"
 	taskId:       #Identifier
 	attemptId:    #Identifier
@@ -156,7 +162,8 @@ package network
 	}
 }
 
-#GateDecision: #RecordBase & {
+#GateDecision: {
+	#RecordBase
 	kind:         "GATE_DECISION"
 	taskId:       #Identifier
 	attemptId:    #Identifier
