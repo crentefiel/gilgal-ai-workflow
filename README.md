@@ -8,7 +8,7 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 **Concept documented by:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **First public specification:** 2026-08-25  
-**Current concept version:** 0.4.0
+**Current concept version:** 0.5.0
 
 ---
 
@@ -16,13 +16,14 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 O **GILGAL** é um protocolo de trabalho para agentes de IA que programam software.
 
-A ideia central é manter o último estado comprovadamente bom protegido enquanto a IA trabalha em candidatos isolados — e, a partir da versão 0.4.0, também impedir que uma hipótese já rejeitada continue sendo repetida silenciosamente em novas tentativas.
+A ideia central é manter o último estado comprovadamente bom protegido enquanto a IA trabalha em candidatos isolados. A versão 0.4.0 adicionou Failure Memory para impedir repetição silenciosa de hipóteses rejeitadas; a versão **0.5.0** formaliza **Success-Only Promotion**: o acerto vira produto, enquanto o erro vira conhecimento e proteção contra repetição.
 
-- **STABLE** — última versão comprovadamente funcional.
+- **STABLE** — última versão comprovadamente funcional; contém somente implementação aprovada.
 - **WORK / CANDIDATE** — ambiente onde a IA pode editar, experimentar e corrigir.
 - **SENTINEL** — reúne evidências, executa verificações e procura regressões.
 - **GATE** — bloqueia promoção quando os requisitos não foram comprovados.
-- **FAILURE MEMORY** — registra hipóteses e estratégias rejeitadas.
+- **FAILURE MEMORY** — registra hipóteses e estratégias rejeitadas, adiadas ou inconclusivas para não serem repetidas cegamente.
+- **REGRESSION REPLAY** — transforma falhas reproduzíveis em proteção executável.
 - **HYPOTHESIS LEDGER** — torna o histórico da investigação explícito.
 - **BRANCHING / DIVERGENCE** — separa estratégias concorrentes a partir da mesma base STABLE.
 
@@ -80,7 +81,7 @@ Isso não significa automaticamente que uma mudança grande está errada. Signif
 
 ### Failure Memory e Hypothesis Ledger
 
-A versão 0.4.0 adiciona uma proteção para um problema diferente: a IA pode preservar STABLE corretamente e, ainda assim, ficar presa em uma mesma hipótese ruim.
+A versão 0.4.0 adicionou uma proteção para um problema diferente: a IA pode preservar STABLE corretamente e, ainda assim, ficar presa em uma mesma hipótese ruim.
 
 Exemplo do que evitar:
 
@@ -96,7 +97,7 @@ WORK v3 herdando v2
 mais workarounds, mesma estratégia
 ```
 
-Nova regra:
+Regra:
 
 > **A failed hypothesis must not silently become the foundation of the next hypothesis.**
 
@@ -104,13 +105,37 @@ Uma investigação difícil SHOULD registrar hipótese, família de estratégia,
 
 Veja [HYPOTHESIS_LEDGER.md](HYPOTHESIS_LEDGER.md).
 
+### Success-Only Promotion — 0.5.0
+
+A versão **0.5.0** separa explicitamente o que entra no produto do que permanece como memória de investigação:
+
+```text
+STABLE = somente implementação comprovada e aprovada
+FAILURE MEMORY = erro, hipótese rejeitada/adiada e motivo
+REGRESSION REPLAY = proteção executável contra a volta do erro
+```
+
+> **O acerto vira produto. O erro vira conhecimento.**
+
+Código de uma tentativa rejeitada **não deve ser promovido para STABLE apenas para preservar histórico**. O histórico deve sobreviver como evidência, Failure Memory, Hypothesis Ledger, candidato FAILED e Regression Replay quando a falha for reproduzível.
+
+Antes de repetir uma estratégia rejeitada ou uma família EXHAUSTED, o agente deve consultar a memória da investigação. Repetição sem nova evidência deve ser sinalizada como:
+
+```text
+REJECTED STRATEGY REUSE DETECTED
+```
+
+Uma estratégia `DEFERRED` é diferente de `REJECTED`: ela não entra no produto atual, mas pode ser reaberta no futuro com contexto e evidência apropriados.
+
+Veja [GILGAL 0.5 — Success-Only Promotion](GILGAL_0_5_SUCCESS_ONLY_PROMOTION.md).
+
 ---
 
 ## English
 
 **GILGAL** is a guarded development protocol for AI coding agents.
 
-Its central idea is to keep the last verified version protected while the AI works in isolated candidate environments. Version 0.4.0 extends this with decision memory so rejected hypotheses do not silently become the basis of later attempts.
+Its central idea is to keep the last verified version protected while the AI works in isolated candidate environments. Version 0.4.0 added decision memory for rejected hypotheses; version **0.5.0** formalizes **Success-Only Promotion** so verified success becomes product while failures remain investigation knowledge and regression protection.
 
 ```mermaid
 flowchart TD
@@ -176,7 +201,7 @@ This repository includes **GILGAL Sentinel Reference Implementation 0.2.0** in [
 
 The local TypeScript CLI resolves STABLE/CANDIDATE Git evidence, runs configured checks, evaluates `command`, `manual`, and `replay` contracts, compares exact-SHA baselines, enforces an optional Change Budget, writes JSON/Markdown reports, and returns CI-compatible gate exit codes. It never promotes code or mutates STABLE.
 
-The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule from protocol 0.4.0. Those rules are already part of the protocol and may be applied manually or by future Sentinel implementations.
+The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule from protocol 0.4.0 or every Success-Only Promotion rule from protocol 0.5.0. Those rules are normative at the protocol level and may be applied manually or by future Sentinel implementations.
 
 ## Regression Replay
 
@@ -214,6 +239,20 @@ Failure Memory preserves rejected or inconclusive reasoning paths as auditable d
 > **A failed hypothesis must not silently become the foundation of the next hypothesis.**
 
 A Candidate Family groups attempts that test the same underlying strategy. A family may be marked **EXHAUSTED** when the available evidence rejects that strategy. An AI agent must not silently reopen an exhausted family merely by renaming the implementation.
+
+## Success-Only Promotion
+
+Protocol 0.5.0 defines the separation between product state and investigation memory:
+
+```text
+STABLE = approved implementation only
+FAILURE MEMORY = rejected/deferred/inconclusive reasoning and evidence
+REGRESSION REPLAY = executable protection against known failures
+```
+
+> **The success becomes product. The failure becomes knowledge.**
+
+Rejected implementation is not promoted merely to preserve history. A rejected or exhausted strategy must not be silently reused; if attempted without new evidence, the workflow should report `REJECTED STRATEGY REUSE DETECTED`.
 
 ## Hypothesis Ledger
 
@@ -265,6 +304,7 @@ The Comparative Gate does not choose the "least bad" candidate. Every candidate 
 13. **Competing hypotheses should branch from the same STABLE base whenever practical.**
 14. **An exhausted strategy must not be silently repeated without new evidence or explicit reopening.**
 15. **A Comparative Gate must return no winner when no candidate satisfies critical requirements.**
+16. **Only verified, approved implementation becomes STABLE; failures remain knowledge, not active product code.**
 
 ## Suggested implementation
 
@@ -311,6 +351,10 @@ Failure Memory records why
 new hypothesis branches from STABLE
 ```
 
+With 0.5.0, promotion also follows this invariant:
+
+> **Only approved success becomes product; failed reasoning is preserved as evidence, not promoted as active implementation.**
+
 ## Human gate
 
 Some behaviors cannot be proven by source code or CI alone, for example:
@@ -325,44 +369,45 @@ In those cases, the AI may report **PENDING**, but it must not mark the test as 
 
 ## Memory model
 
-GILGAL now distinguishes several forms of memory:
+GILGAL distinguishes product memory from investigation memory:
 
 ```text
-Executable Memory
-  what worked in STABLE
+Product / Executable Memory
+  what worked and is approved in STABLE
 
 Regression Replay
   how a previously fixed bug can be reproduced
 
 Failure Memory
-  which hypotheses or strategies were rejected and why
+  which hypotheses or strategies were rejected/deferred and why
 ```
 
 Together:
 
 ```text
-what worked
+what worked becomes product
 +
-what failed
+what failed becomes knowledge
 +
 why a strategy was rejected
 +
 how to prove the regression did not return
 ```
 
-## GILGAL 0.5 protocol candidate
+## Capability-aware reconciliation proposal
 
-A capability-aware evolution is under review. It adds Capability Ledger, Preservation Baseline, Regression Quarantine, Composite `NO_WINNER`, Capability Transplant and Reconciliation Candidates.
+A capability-aware evolution remains under review. It proposes Capability Ledger, Preservation Baseline, Regression Quarantine, Composite `NO_WINNER`, Capability Transplant and Reconciliation Candidates.
 
-The candidate also proposes Transplant Manifests, a Capability Dependency Graph, a Blast-Radius Gate, evidence provenance/taint rules, shadow validation and confidence-aware revalidation.
+It also proposes Transplant Manifests, a Capability Dependency Graph, a Blast-Radius Gate, evidence provenance/taint rules, shadow validation and confidence-aware revalidation.
 
-This is a protocol proposal. The current Sentinel 0.2.0 reference implementation does not yet enforce these rules automatically.
+This companion proposal is **not automatically normative merely because protocol 0.5.0 is now released**. The current Sentinel 0.2.0 reference implementation does not enforce these capability-aware rules automatically.
 
-See [GILGAL 0.5 Capability-Aware Reconciliation](GILGAL_0_5_CAPABILITY_RECONCILIATION.md).
+See [Capability-Aware Reconciliation proposal](GILGAL_0_5_CAPABILITY_RECONCILIATION.md).
 
 ## Documents
 
 - [GILGAL.md](GILGAL.md) — concept, origin and principles
+- [GILGAL 0.5 — Success-Only Promotion](GILGAL_0_5_SUCCESS_ONLY_PROMOTION.md) — product-vs-investigation memory and promotion rule
 - [HYPOTHESIS_LEDGER.md](HYPOTHESIS_LEDGER.md) — Failure Memory, Candidate Families, Strategy Exhaustion and Branching
 - [SENTINEL.md](SENTINEL.md) — verification and regression-detection layer
 - [SPECIFICATION.md](SPECIFICATION.md) — normative workflow and state transitions
@@ -373,7 +418,7 @@ See [GILGAL 0.5 Capability-Aware Reconciliation](GILGAL_0_5_CAPABILITY_RECONCILI
 
 Git branches, worktrees, CI, staging environments, rollback strategies, promotion gates, parallel experiment branches and automated testing are established software-engineering mechanisms.
 
-**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, human-only validation, Regression Replay, explicit change-scope budgeting, Failure Memory, Hypothesis Ledger, Candidate Families, Strategy Exhaustion, Branching/Divergence, and Comparative Gate.**
+**GILGAL is the name used here for the specific protocol that combines protected STABLE state, isolated AI WORK state, executable-memory comparison, regression contracts, Sentinel verification, promotion gates, human-only validation, Regression Replay, explicit change-scope budgeting, Failure Memory, Hypothesis Ledger, Candidate Families, Strategy Exhaustion, Branching/Divergence, Comparative Gate, and Success-Only Promotion.**
 
 This repository documents the concept and its evolution. It does not make a claim of patent status or worldwide novelty.
 
@@ -381,6 +426,6 @@ This repository documents the concept and its evolution. It does not make a clai
 
 ## Status
 
-**GILGAL protocol 0.4.0 + GILGAL Sentinel reference implementation 0.2.0.**
+**GILGAL protocol 0.5.0 + GILGAL Sentinel reference implementation 0.2.0.**
 
 Feedback, experiments and reference implementations are welcome.
