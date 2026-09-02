@@ -2,6 +2,48 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## 0.5.0 — 2026-09-02
+
+Formalized **Success-Only Promotion** as a normative GILGAL protocol rule.
+
+### Core principle
+
+> **The success becomes product. The failure becomes knowledge.**
+
+Portuguese formulation:
+
+> **O acerto vira produto. O erro vira conhecimento.**
+
+### Added
+
+- **Success-Only Promotion**: only verified and approved implementation belongs in STABLE.
+- Explicit separation between **Product / Executable Memory** and **Investigation Memory**.
+- Failed or rejected implementation must not be promoted merely to preserve history.
+- Failure Memory preserves rejected, deferred, or inconclusive reasoning and supporting evidence.
+- Regression Replay remains the executable protection against reproducible historical failures.
+- `DEFERRED` is distinguished from `REJECTED`: deferred work is intentionally outside the current product scope but may be reopened later with appropriate context/evidence.
+- Agents should consult Failure Memory / Hypothesis Ledger before repeating a previously investigated strategy.
+- Reuse of a rejected or exhausted strategy without new evidence should be reported as `REJECTED STRATEGY REUSE DETECTED`.
+- Renaming files, classes, branches, or applying cosmetic implementation changes does not make an underlying rejected strategy new.
+- Promotion reports should distinguish what becomes active product code from what remains investigation knowledge.
+
+### Memory model
+
+```text
+STABLE
+  verified and approved implementation only
+
+FAILURE MEMORY
+  rejected/deferred/inconclusive reasoning and evidence
+
+REGRESSION REPLAY
+  executable protection against known reproducible failures
+```
+
+### Reference implementation note
+
+The GILGAL Sentinel reference implementation remains at **0.2.0**. Protocol version and Sentinel implementation version remain independent. Sentinel 0.2.0 does not yet automatically enforce every Success-Only Promotion rule introduced by protocol 0.5.0.
+
 ## 0.4.0 — 2026-08-27
 
 Extended the GILGAL protocol with **Failure Memory**, **Hypothesis Ledger**, **Candidate Families**, **Strategy Exhaustion**, **Branching / Divergence**, and **Comparative Gate**.
@@ -59,7 +101,6 @@ This implementation version is independent from the GILGAL protocol version.
 - Optional replay metadata through `origin` and `description`.
 - Dedicated Regression Replay summary in JSON and Markdown reports.
 - Unit/integration coverage for Change Budget and replay regressions.
-- Example configuration and replay contract documentation.
 
 ### Safety rules
 
@@ -93,7 +134,7 @@ This implementation version is independent from the GILGAL protocol version.
 - Configured automated checks and `command`/`manual` contracts.
 - SHA-bound local human approvals with stale-approval detection.
 - Exact-STABLE-SHA baseline loading and critical regression detection.
-- JSON and Markdown reports, CI exit codes, and READY/BLOCKED gate evaluation.
+- JSON/Markdown reports, CI exit codes, and READY/BLOCKED gate evaluation.
 - Unit, integration, and Git read-only protection tests.
 - Configuration/contracts/baseline versioning policy and local-state ignore policy.
 

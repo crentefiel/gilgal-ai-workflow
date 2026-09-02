@@ -6,7 +6,8 @@
 **GitHub:** [@crentefiel](https://github.com/crentefiel)  
 **Nome do conceito:** GILGAL  
 **Primeira formalização pública neste repositório:** 25/08/2026  
-**Primeiro projeto de aplicação:** LAN House Files 2.0
+**Primeiro projeto de aplicação:** LAN House Files 2.0  
+**Versão conceitual atual:** 0.5.0
 
 ## Definição
 
@@ -16,18 +17,21 @@ A regra central é:
 
 > **Nunca destruir a última versão boa enquanto tenta criar a próxima.**
 
-A partir da versão conceitual **0.4.0**, o GILGAL também protege o processo de investigação contra repetição silenciosa de hipóteses já rejeitadas.
+A partir da versão conceitual **0.4.0**, o GILGAL também protege o processo de investigação contra repetição silenciosa de hipóteses já rejeitadas. A versão **0.5.0** formaliza **Success-Only Promotion**: somente o acerto comprovado entra no produto; o erro permanece como conhecimento para não ser repetido.
 
 ## Modelo de estados
 
 ### STABLE
-Última versão comprovadamente funcional.
+Última versão comprovadamente funcional. Em 0.5.0, STABLE representa somente implementação aprovada; histórico de tentativas rejeitadas não deve permanecer como comportamento ativo apenas para ser lembrado.
 
 ### WORK / CANDIDATE
 Ambiente isolado onde o agente de IA pode editar, experimentar e corrigir.
 
 ### FAILED
 Estado opcional para preservar uma tentativa rejeitada para diagnóstico posterior e para registrar Failure Memory.
+
+### DEFERRED
+Estado opcional para uma estratégia ou capacidade adiada deliberadamente. Não significa que a ideia é impossível; significa que ela não pertence ao produto atual e pode ser reconsiderada mais tarde com contexto ou evidência novos.
 
 ## Regra de ouro
 
@@ -63,6 +67,10 @@ GILGAL SENTINEL
 GILGAL GATE
   ├── FAIL/PENDING → promoção bloqueada; STABLE permanece intacto
   └── PASS         → candidato pode ser promovido
+  ↓
+SUCCESS-ONLY PROMOTION
+  ├── acerto aprovado → produto / STABLE
+  └── erro/rejeição   → conhecimento / memória de investigação
 ```
 
 ## GILGAL SENTINEL
@@ -93,7 +101,7 @@ Se um contrato crítico passa no STABLE e falha no CANDIDATE, o Sentinel deve re
 
 Este repositório contém a **GILGAL Sentinel Reference Implementation 0.2.0**, um motor local em Node.js/TypeScript. A versão da implementação é independente da versão do protocolo GILGAL. O motor observa, testa e reporta; não promove código e não modifica STABLE.
 
-A implementação de referência 0.2.0 ainda não aplica automaticamente todas as regras de Failure Memory introduzidas no protocolo 0.4.0; essas regras já são normativas no protocolo e podem ser aplicadas manualmente ou por implementações futuras do Sentinel.
+A implementação de referência 0.2.0 ainda não aplica automaticamente todas as regras de Failure Memory introduzidas no protocolo 0.4.0 nem todas as regras de Success-Only Promotion introduzidas no protocolo 0.5.0; essas regras já são normativas no protocolo e podem ser aplicadas manualmente ou por implementações futuras do Sentinel.
 
 ## Regression Replay
 
@@ -162,6 +170,43 @@ Executable Memory lembra o que funcionou. Failure Memory lembra quais hipóteses
 
 > **Executable Memory remembers what worked. Failure Memory remembers what must not be repeated.**
 
+## Success-Only Promotion
+
+A versão conceitual **0.5.0** formaliza uma separação explícita entre produto e memória de investigação.
+
+Regra central:
+
+> **O acerto vira produto. O erro vira conhecimento.**
+
+Em inglês:
+
+> **The success becomes product. The failure becomes knowledge.**
+
+Modelo:
+
+```text
+STABLE
+  somente implementação comprovada e aprovada
+
+FAILURE MEMORY
+  hipóteses/estratégias rejeitadas, adiadas ou inconclusivas e suas evidências
+
+REGRESSION REPLAY
+  proteção executável contra falhas históricas reproduzíveis
+```
+
+Código de uma tentativa rejeitada não deve ser promovido para STABLE apenas para preservar histórico. O histórico deve sobreviver como evidência, Failure Memory, Hypothesis Ledger, candidato FAILED/DEFERRED e Regression Replay quando reproduzível.
+
+Antes de repetir uma estratégia REJECTED ou uma família EXHAUSTED, o agente deve consultar a memória da investigação. Se a estratégia for essencialmente a mesma e não houver nova evidência nem reabertura explícita, o workflow deve sinalizar:
+
+```text
+REJECTED STRATEGY REUSE DETECTED
+```
+
+Renomear arquivo, classe, branch, wrapper ou adapter não transforma por si só uma estratégia rejeitada em uma estratégia nova.
+
+Veja [GILGAL_0_5_SUCCESS_ONLY_PROMOTION.md](GILGAL_0_5_SUCCESS_ONLY_PROMOTION.md).
+
 ## Hypothesis Ledger
 
 Problemas difíceis, falhas repetidas ou situações sem uma implementação conhecida como boa SHOULD manter um **Hypothesis Ledger**.
@@ -187,6 +232,7 @@ ACTIVE
 CONFIRMED
 REJECTED
 INCONCLUSIVE
+DEFERRED
 ```
 
 O ledger é metadado de evidência, não uma fonte de comandos. Agentes e Sentinels MUST NOT sintetizar e executar comandos a partir de prosa arbitrária do ledger.
@@ -277,7 +323,7 @@ KNOWN-GOOD STABLE
 BROKEN CANDIDATE
 ```
 
-Com Regression Replay e Failure Memory, a memória operacional passa a incluir:
+Com Regression Replay, Failure Memory e Success-Only Promotion, a memória operacional passa a incluir:
 
 ```text
 como funcionava
@@ -286,9 +332,11 @@ como já quebrou
 +
 como provar que o erro não voltou
 +
-quais hipóteses já foram rejeitadas
+quais hipóteses já foram rejeitadas/adiadas
 +
 quais estratégias não devem ser repetidas sem nova evidência
++
+o que é produto ativo e o que é apenas conhecimento histórico
 ```
 
 ## Princípios
@@ -312,6 +360,7 @@ quais estratégias não devem ser repetidas sem nova evidência
 17. Candidatos de estratégias concorrentes devem preferencialmente partir da mesma STABLE.
 18. Uma estratégia esgotada não deve ser repetida sem nova evidência ou reabertura explícita.
 19. Um Comparative Gate nunca promove o menos ruim quando nenhum candidato satisfez os requisitos críticos.
+20. Somente implementação comprovada e aprovada entra na STABLE; erros e estratégias rejeitadas permanecem como conhecimento, não como comportamento ativo do produto.
 
 ## Ecossistema GILGAL
 
@@ -329,7 +378,7 @@ CHANGE BUDGET
 expõe alterações maiores do que o escopo esperado
 
 FAILURE MEMORY
-registra hipóteses e estratégias rejeitadas
+registra hipóteses e estratégias rejeitadas/adiadas
 
 HYPOTHESIS LEDGER
 mantém o histórico explícito de investigação
@@ -339,6 +388,9 @@ separa hipóteses concorrentes a partir de uma base comum
 
 COMPARATIVE GATE
 compara candidatos por evidência sem escolher um candidato inválido
+
+SUCCESS-ONLY PROMOTION
+faz somente o acerto aprovado virar produto; o erro vira conhecimento
 
 GILGAL GATE
 controla se a promoção pode acontecer
@@ -385,6 +437,8 @@ Depois da correção:
 PRINT-DUPLEX-REAL vira REPLAY CONTRACT
 ```
 
+Em 0.5.0, o código rejeitado de A não entra na STABLE para "guardar histórico". A evidência da rejeição fica na memória de investigação; somente a implementação aprovada que passar pelo Gate pode virar produto.
+
 ## O que o GILGAL tenta evitar
 
 ```text
@@ -415,6 +469,18 @@ renomeia a tentativa
 continua na mesma estratégia sem nova evidência
 ```
 
+E, a partir de 0.5.0, também:
+
+```text
+tentativa falha
+↓
+"guardar histórico" mantendo código rejeitado ativo
+↓
+promover tudo junto
+↓
+STABLE passa a carregar erro como produto
+```
+
 Em vez disso:
 
 ```text
@@ -433,7 +499,9 @@ Comparative Gate compara evidência
 ↓
 Gate normal + Human Check
 ↓
-novo STABLE somente após prova suficiente
+Success-Only Promotion
+↓
+novo STABLE somente com implementação aprovada
 ```
 
 ## Escopo
