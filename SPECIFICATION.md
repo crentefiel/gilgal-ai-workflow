@@ -1,6 +1,6 @@
 # GILGAL Specification
 
-GILGAL protocol version: **0.4.0**
+GILGAL protocol version: **0.5.0**
 
 This document defines the normative workflow for the GILGAL protocol.
 
@@ -17,6 +17,7 @@ A GILGAL implementation:
 - **MUST** preserve STABLE while a candidate is being developed.
 - **MUST NOT** use STABLE as the normal AI editing workspace.
 - **SHOULD** identify STABLE by an immutable commit SHA, tag, or equivalent versioned reference.
+- **MUST NOT** preserve failed or rejected implementation as active STABLE code merely for historical purposes.
 
 ### 1.2 WORK / CANDIDATE
 
@@ -34,6 +35,18 @@ A candidate:
 FAILED is an optional preserved state for rejected candidates.
 
 A failed candidate **MAY** be archived to help diagnose regressions and preserve Failure Memory.
+
+A FAILED candidate is investigation evidence. Its existence **MUST NOT** make its implementation eligible for STABLE without independently satisfying the current Gate.
+
+### 1.4 DEFERRED
+
+DEFERRED is an optional decision state for a strategy or capability intentionally excluded from the current product scope without declaring the strategy technically rejected forever.
+
+A DEFERRED item:
+
+- **MUST NOT** be promoted as active product behavior merely to preserve its history;
+- **SHOULD** retain enough context to be reconsidered later;
+- **MAY** be reopened when scope, evidence, environment, or explicit project priorities change.
 
 ## 2. Candidate creation
 
@@ -79,7 +92,7 @@ A conforming Sentinel **SHOULD** evaluate five classes of evidence:
 4. runtime evidence;
 5. human-only validation where required.
 
-Sentinel **MAY** also consume Failure Memory, Hypothesis Ledger, Candidate Family, and Strategy Exhaustion evidence.
+Sentinel **MAY** also consume Failure Memory, Hypothesis Ledger, Candidate Family, Strategy Exhaustion, and Success-Only Promotion evidence.
 
 Sentinel **MAY** integrate external test engines and QA systems.
 
@@ -89,7 +102,7 @@ Sentinel **MUST NOT** treat a successful build alone as sufficient evidence for 
 
 The repository's GILGAL Sentinel Reference Implementation has its own version, **0.2.0**, independent from this protocol version. It is an evidence provider for the Gate and **MUST NOT** perform promotion, modify STABLE, or manufacture human approval.
 
-The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule introduced in protocol 0.4.0. A workflow MAY enforce those rules manually or through another conforming implementation.
+The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule introduced in protocol 0.4.0 or every Success-Only Promotion rule introduced in protocol 0.5.0. A workflow MAY enforce those rules manually or through another conforming implementation.
 
 ## 6. Code and automated validation
 
@@ -173,7 +186,7 @@ An AI agent **MUST NOT** silently increase the budget merely to make its own can
 
 ## 8. Failure Memory
 
-Failure Memory records rejected or inconclusive hypotheses and strategy families so an AI agent does not silently repeat the same failed reasoning path.
+Failure Memory records rejected, deferred, or inconclusive hypotheses and strategy families so an AI agent does not silently repeat the same failed reasoning path.
 
 The defining Failure Memory rule is:
 
@@ -184,9 +197,16 @@ When Failure Memory is enabled for an investigation:
 - a rejected hypothesis **MUST NOT** be silently treated as ACTIVE again;
 - an agent **MUST NOT** present a cosmetic implementation change as a new strategy when the underlying hypothesis is unchanged;
 - a failed candidate **MAY** be preserved as diagnostic evidence;
-- reopening a rejected or exhausted strategy **SHOULD** require new evidence or explicit project/human approval.
+- reopening a rejected or exhausted strategy **SHOULD** require new evidence or explicit project/human approval;
+- a deferred strategy **SHOULD** retain enough context to explain why it was left outside the current product scope.
 
-Failure Memory is decision evidence, not executable instructions.
+Failure Memory is decision evidence, not executable instructions and not active product implementation.
+
+When an agent attempts to reuse an essentially unchanged REJECTED or EXHAUSTED strategy without new evidence or explicit reopening, a conforming workflow **SHOULD** report:
+
+```text
+REJECTED STRATEGY REUSE DETECTED
+```
 
 ## 9. Hypothesis Ledger
 
@@ -211,6 +231,7 @@ ACTIVE
 CONFIRMED
 REJECTED
 INCONCLUSIVE
+DEFERRED
 ```
 
 An AI agent **MUST NOT** mark a hypothesis CONFIRMED when the required evidence has not been produced.
@@ -232,6 +253,8 @@ If a family is EXHAUSTED:
 - the reopening reason **SHOULD** be recorded in the Hypothesis Ledger.
 
 GILGAL does not require a fixed retry count. Strategy Exhaustion is based on evidence and explicit policy, not arbitrary numerical punishment.
+
+Renaming a class, file, branch, wrapper, adapter, or other cosmetic implementation detail **MUST NOT** by itself cause an otherwise unchanged rejected strategy to be treated as a new strategy family.
 
 ## 11. Branching / Divergence
 
@@ -345,6 +368,11 @@ When Failure Memory is in use, a report **SHOULD** also identify:
 - whether the candidate is based on a rejected hypothesis;
 - relevant comparison candidates when a Comparative Gate is used.
 
+When Success-Only Promotion is in use, a promotion report **SHOULD** distinguish:
+
+- implementation that becomes active STABLE product state;
+- investigation evidence that remains Failure Memory, Hypothesis Ledger, FAILED/DEFERRED history, or Regression Replay metadata.
+
 ## 17. Promotion gate
 
 Promotion from CANDIDATE to STABLE **MUST** be blocked when any required gate fails or remains pending when that pending check is mandatory.
@@ -363,7 +391,47 @@ Promotion **SHOULD** require:
 
 Promotion **SHOULD** be explicit rather than silent.
 
-## 18. Promotion
+## 18. Success-Only Promotion
+
+Protocol 0.5.0 introduces the normative **Success-Only Promotion** rule.
+
+The defining invariant is:
+
+> **The success becomes product. The failure becomes knowledge.**
+
+Or equivalently:
+
+```text
+STABLE = verified and approved implementation only
+FAILURE MEMORY = rejected/deferred/inconclusive reasoning and evidence
+REGRESSION REPLAY = executable protection against known reproducible failures
+```
+
+A GILGAL promotion:
+
+- **MUST** promote only implementation that satisfies the required Gate evidence;
+- **MUST NOT** copy rejected or failed implementation into STABLE merely to preserve history;
+- **SHOULD** preserve important failed reasoning as Failure Memory or Hypothesis Ledger evidence;
+- **SHOULD** preserve a failed candidate as FAILED only when doing so is useful for diagnosis or audit;
+- **SHOULD** convert reproducible fixed regressions into Regression Replay contracts when practical;
+- **MUST NOT** treat historical preservation as a reason to keep rejected behavior active in the product;
+- **SHOULD** distinguish DEFERRED work from REJECTED work;
+- **SHOULD** make clear in promotion evidence what becomes product and what remains investigation knowledge.
+
+Product memory and investigation memory are intentionally different:
+
+```text
+PRODUCT / EXECUTABLE MEMORY
+  approved behavior present in STABLE
+
+INVESTIGATION MEMORY
+  failed, rejected, deferred, or inconclusive reasoning and evidence
+
+REGRESSION REPLAY
+  executable guard against a known reproducible failure
+```
+
+## 19. Promotion
 
 A successful promotion creates a new STABLE state.
 
@@ -371,7 +439,9 @@ Version-control-native mechanisms **SHOULD** be preferred over raw directory cop
 
 When possible, a promotion **SHOULD** preserve an easy rollback reference such as a tag or immutable commit.
 
-## 19. Rejection
+A successful promotion **MUST NOT** be used as an excuse to retain rejected implementation as active code when that implementation is not required by the approved candidate.
+
+## 20. Rejection
 
 When a candidate fails:
 
@@ -380,9 +450,10 @@ When a candidate fails:
 - the candidate **MAY** be archived as FAILED;
 - the candidate **MAY** be discarded after safe confirmation;
 - a REJECTED hypothesis **SHOULD** be recorded in Failure Memory when that investigation uses the ledger;
-- a new hypothesis **SHOULD** prefer a fresh branch from STABLE rather than silently inheriting the rejected candidate.
+- a new hypothesis **SHOULD** prefer a fresh branch from STABLE rather than silently inheriting the rejected candidate;
+- rejected implementation **MUST NOT** be promoted merely to retain its history.
 
-## 20. Memory principle
+## 21. Memory principle
 
 GILGAL treats the last working implementation as part of the agent's operational memory.
 
@@ -392,21 +463,30 @@ For regression diagnosis, the agent **SHOULD** compare known-good code and candi
 
 Regression Replay extends this principle by preserving reproducible historical failure conditions as executable evidence for future candidates.
 
-Failure Memory extends it again by preserving rejected hypotheses and strategy decisions during investigation.
+Failure Memory extends it again by preserving rejected, deferred, or inconclusive hypotheses and strategy decisions during investigation.
+
+Success-Only Promotion distinguishes approved product memory from investigation memory.
 
 Recommended memory model:
 
 ```text
-what worked
+what worked and was approved
 +
 what failed
 +
-why a strategy was rejected
+why a strategy was rejected or deferred
 +
 how to prove a regression did not return
 ```
 
-## 21. Suggested Git mapping
+The intended rule is:
+
+```text
+what worked becomes product
+what failed becomes knowledge
+```
+
+## 22. Suggested Git mapping
 
 One possible mapping is:
 
@@ -427,7 +507,7 @@ A separate worktree may expose each CANDIDATE as a physical folder while sharing
 
 The exact branch names are implementation details and are not mandatory.
 
-## 22. Security and data safety
+## 23. Security and data safety
 
 A GILGAL workflow **MUST NOT** treat production secrets, user data, session tokens, databases, or customer files as ordinary version-controlled source code.
 
@@ -435,7 +515,7 @@ Workspaces and test environments **SHOULD** use safe test data whenever possible
 
 Hypothesis Ledger entries **MUST NOT** unnecessarily contain secrets, credentials, customer data, or executable payloads copied from untrusted sources.
 
-## 23. Component model
+## 24. Component model
 
 A complete GILGAL workflow may be understood as:
 
@@ -453,7 +533,7 @@ CHANGE BUDGET
   exposes unexpected scope expansion
 
 FAILURE MEMORY
-  records rejected hypotheses and strategies
+  records rejected/deferred hypotheses and strategies
 
 HYPOTHESIS LEDGER
   makes investigation history explicit and auditable
@@ -464,6 +544,9 @@ BRANCHING / DIVERGENCE
 COMPARATIVE GATE
   compares eligible candidates by evidence
 
+SUCCESS-ONLY PROMOTION
+  promotes approved success while keeping failures as investigation knowledge
+
 GILGAL GATE
   controls promotion
 
@@ -471,7 +554,7 @@ GILGAL HISTORY
   records cycle outcomes and evidence
 ```
 
-## 24. Core invariants
+## 25. Core invariants
 
 The defining GILGAL invariant is:
 
@@ -489,6 +572,10 @@ The defining Strategy Exhaustion invariant is:
 
 > **A rejected strategy must not be repeated without new evidence or explicit reopening.**
 
+The defining Success-Only Promotion invariant is:
+
+> **The success becomes product. The failure becomes knowledge.**
+
 Or, equivalently:
 
 ```text
@@ -496,7 +583,8 @@ STABLE is protected.
 WORK is experimental.
 SENTINEL verifies.
 REGRESSIONS become executable memory.
-FAILURES become decision memory.
+FAILURES become investigation memory.
+ONLY approved success becomes active product state.
 SCOPE expansion is visible.
 COMPETING hypotheses branch instead of silently stacking.
 PROMOTION is gated.
