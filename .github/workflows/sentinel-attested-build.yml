@@ -1,0 +1,50 @@
+name: Sentinel Attested Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  build-and-attest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sentinel/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm --prefix sentinel ci
+
+      - name: Verify Sentinel
+        run: |
+          npm --prefix sentinel run typecheck
+          npm --prefix sentinel test
+          npm --prefix sentinel run build
+
+      - name: Package Sentinel
+        run: |
+          mkdir -p artifacts
+          npm --prefix sentinel pack --pack-destination ../artifacts
+          sha256sum artifacts/* | tee artifacts/SHA256SUMS
+
+      - name: Attest package provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/*.tgz
+
+      - name: Upload package and checksums
+        uses: actions/upload-artifact@v6
+        with:
+          name: gilgal-sentinel-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error

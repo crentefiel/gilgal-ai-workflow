@@ -1,0 +1,48 @@
+name: GILGAL Policy Gate
+
+on:
+  pull_request:
+    paths:
+      - "policy/**"
+      - ".github/workflows/gilgal-policy-gate.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "policy/**"
+      - ".github/workflows/gilgal-policy-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy-gate:
+    name: gilgal/capability-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup CUE
+        uses: cue-lang/setup-cue@v1.0.1
+        with:
+          version: latest
+
+      - name: Validate policy schemas
+        run: cue vet -c policy/cue/gilgal.cue policy/examples/lan-house-gate-input.json -d '#GateInput'
+
+      - name: Setup OPA
+        uses: open-policy-agent/setup-opa@v2.4.0
+        with:
+          version: latest
+
+      - name: Strict policy check
+        run: opa check --strict policy/opa
+
+      - name: Run policy contract tests
+        run: opa test policy/opa -v
+
+      - name: Evaluate LAN House example
+        run: |
+          opa eval             --format pretty             --data policy/opa/gilgal_gate.rego             --input policy/examples/lan-house-gate-input.json             data.gilgal.gate.decision

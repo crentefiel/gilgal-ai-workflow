@@ -6,6 +6,35 @@ A safety workflow for AI coding agents: **never destroy the last known-good vers
 
 > **Core rule:** STABLE is never the laboratory. WORK is the laboratory.
 
+[![Sentinel CI](https://github.com/crentefiel/gilgal-ai-workflow/actions/workflows/sentinel-ci.yml/badge.svg)](https://github.com/crentefiel/gilgal-ai-workflow/actions/workflows/sentinel-ci.yml)
+[![GILGAL Policy Gate](https://github.com/crentefiel/gilgal-ai-workflow/actions/workflows/gilgal-policy-gate.yml/badge.svg)](https://github.com/crentefiel/gilgal-ai-workflow/actions/workflows/gilgal-policy-gate.yml)
+
+## The problem in 20 seconds
+
+An AI coding agent fixes duplex printing—but silently breaks WhatsApp and file reception. Tests for printing are green. Is the new version better?
+
+```text
+STABLE  → WhatsApp PASS | File reception PASS | Duplex FAIL
+WORK    → WhatsApp FAIL | File reception FAIL | Duplex PASS
+GILGAL  → NO WINNER → build a Reconciliation Candidate
+```
+
+GILGAL protects the last verified state, remembers failed strategies, evaluates behavior by capability, and blocks promotion when a candidate improves one area by regressing another.
+
+> **Do not promote the candidate that fixed one thing. Reconstruct the candidate that preserves everything proven and imports only the verified improvement.**
+
+### What makes it different
+
+- **Capability-aware:** compares observable behavior, not only commits or test totals.
+- **Evidence-bound:** every claim belongs to an exact SHA, environment and proof type.
+- **Human-safe:** AI cannot self-approve physical or real-world evidence.
+- **Failure-aware:** rejected strategies become memory instead of being silently repeated.
+- **Reconciliation-first:** `NO_WINNER` creates a clean path from STABLE instead of selecting the least-bad candidate.
+- **Executable:** Sentinel, CUE schemas and OPA policies turn protocol rules into CI decisions.
+
+**Start here:** [GILGAL 0.5 capability reconciliation](GILGAL_0_5_CAPABILITY_RECONCILIATION.md) · [Evidence & Policy Engine](policy/README.md) · [Influences and prior art](INFLUENCES_AND_PRIOR_ART.md)
+
+
 **Concept documented by:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **First public specification:** 2026-08-25  
 **Current concept version:** 0.5.0
@@ -403,6 +432,14 @@ It also proposes Transplant Manifests, a Capability Dependency Graph, a Blast-Ra
 This companion proposal is **not automatically normative merely because protocol 0.5.0 is now released**. The current Sentinel 0.2.0 reference implementation does not enforce these capability-aware rules automatically.
 
 See [Capability-Aware Reconciliation proposal](GILGAL_0_5_CAPABILITY_RECONCILIATION.md).
+
+## Evidence & Policy Engine prototype
+
+The GILGAL 0.5 candidate now has an executable policy prototype using CUE schemas and an OPA capability Gate. It also includes a manual GitHub-attested Sentinel build workflow.
+
+This is a prototype, not a claim that every GILGAL 0.5 rule is implemented. See [policy/README.md](policy/README.md).
+
+GILGAL explicitly acknowledges the technologies and research that influenced its synthesis. See [Influences and Prior Art](INFLUENCES_AND_PRIOR_ART.md).
 
 ## Documents
 
