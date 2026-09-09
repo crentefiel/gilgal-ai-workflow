@@ -1,591 +1,305 @@
 # GILGAL Specification
 
-GILGAL protocol version: **0.5.0**
+This document defines the current normative core of the GILGAL protocol.
 
-This document defines the normative workflow for the GILGAL protocol.
+The keywords **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** indicate requirement strength.
 
-The keywords **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** indicate requirement strength within this specification.
+Historical protocol-version documents remain in this repository as evolution records. The daily workflow does not depend on a visible 0.x version number.
 
-## 1. States
+## 1. Purpose
 
-### 1.1 STABLE
+GILGAL governs whether a software change may be called trustworthy enough to replace the current known-good state.
 
-STABLE is the last known-good state of the project.
+It does not prescribe how an AI must reason, which model must be used, or which test framework must run.
 
-A GILGAL implementation:
+The operational rule is:
 
-- **MUST** preserve STABLE while a candidate is being developed.
-- **MUST NOT** use STABLE as the normal AI editing workspace.
-- **SHOULD** identify STABLE by an immutable commit SHA, tag, or equivalent versioned reference.
-- **MUST NOT** preserve failed or rejected implementation as active STABLE code merely for historical purposes.
+> **WORK may claim it is finished. Only GILGAL may declare it passed.**
 
-### 1.2 WORK / CANDIDATE
+The normative rule is:
 
-WORK is the isolated state where an AI coding agent may modify code.
+> **No actor declares that the product works. The contract does — and for risk L the contract includes a human check.**
+
+## 2. Core states
+
+### 2.1 STABLE
+
+STABLE is the last verified and approved product state.
+
+An implementation:
+
+- **MUST** keep STABLE distinguishable from experimental work;
+- **MUST NOT** use STABLE as the normal AI editing workspace;
+- **SHOULD** identify STABLE by immutable version-control evidence such as a commit SHA or tag;
+- **MUST NOT** promote rejected implementation merely to preserve history.
+
+### 2.2 WORK / CANDIDATE
+
+WORK is the isolated candidate under development.
 
 A candidate:
 
-- **MUST** originate from a known STABLE state, except when an explicitly recorded refinement continues an ACTIVE hypothesis from another candidate;
+- **MUST** record which STABLE reference it started from;
 - **MUST** remain distinguishable from STABLE;
-- **SHOULD** be reproducible from version-control history;
-- **SHOULD** identify the hypothesis or strategy family being tested when Failure Memory is in use.
+- **SHOULD** be created through version-control isolation, preferably a branch/worktree or equivalent;
+- **MAY** fail without changing STABLE.
 
-### 1.3 FAILED
+## 3. Minimal core
 
-FAILED is an optional preserved state for rejected candidates.
+A conforming minimal implementation needs four responsibilities:
 
-A failed candidate **MAY** be archived to help diagnose regressions and preserve Failure Memory.
+1. **Contracts** — define protected product behavior and evidence requirements.
+2. **Memory** — record rejected, deferred, or exhausted strategy families.
+3. **Check** — calculate affected contracts/risk and collect evidence for the exact candidate.
+4. **Promote** — refuse promotion unless all required preconditions are satisfied.
 
-A FAILED candidate is investigation evidence. Its existence **MUST NOT** make its implementation eligible for STABLE without independently satisfying the current Gate.
+The Gate **MAY** be implemented directly as the refusal logic of `promote`; it does not need to be a standalone service.
 
-### 1.4 DEFERRED
+A Sentinel-style verifier **MAY** provide evidence to `check`, but a permanent Sentinel process is not required by the core protocol.
 
-DEFERRED is an optional decision state for a strategy or capability intentionally excluded from the current product scope without declaring the strategy technically rejected forever.
+## 4. Product contracts
 
-A DEFERRED item:
+A project using contract-driven risk **SHOULD** maintain machine-readable contracts.
 
-- **MUST NOT** be promoted as active product behavior merely to preserve its history;
-- **SHOULD** retain enough context to be reconsidered later;
-- **MAY** be reopened when scope, evidence, environment, or explicit project priorities change.
+Each contract **SHOULD** contain:
 
-## 2. Candidate creation
+- `id` — product-language behavior identifier;
+- `risk` — `S`, `M`, or `L`;
+- `paths` — code surfaces whose changes may affect the contract;
+- automated checks when available;
+- human checks when required.
 
-Before editing, the implementation **MUST** establish:
+Example:
 
-- the current STABLE reference;
-- the candidate base reference;
-- whether the stable working tree is clean;
-- whether unrelated user work would be overwritten.
-
-When a problem has multiple competing hypotheses, candidates **SHOULD** branch from the same STABLE base whenever practical.
-
-The implementation **MUST NOT** use destructive reset or cleanup operations merely to prepare a candidate.
-
-## 3. Editing rule
-
-AI-driven code changes **MUST** occur in WORK/CANDIDATE rather than directly in STABLE during the normal GILGAL workflow.
-
-If the agent discovers that it is editing STABLE, it **SHOULD** stop and move the task into a candidate environment before continuing.
-
-## 4. Diff requirement
-
-Before promotion, the candidate **MUST** be compared against STABLE.
-
-The diff **SHOULD** expose at least:
-
-- added files;
-- modified files;
-- deleted files;
-- summary statistics.
-
-When a regression is reported between a known-good version and a newer version, the agent **SHOULD** inspect the diff before attempting a broad rewrite.
-
-## 5. GILGAL SENTINEL
-
-GILGAL SENTINEL is the verification layer between CANDIDATE and the GILGAL Gate.
-
-A conforming Sentinel **SHOULD** evaluate five classes of evidence:
-
-1. code/static checks;
-2. automated tests;
-3. STABLE-vs-CANDIDATE regression contracts;
-4. runtime evidence;
-5. human-only validation where required.
-
-Sentinel **MAY** also consume Failure Memory, Hypothesis Ledger, Candidate Family, Strategy Exhaustion, and Success-Only Promotion evidence.
-
-Sentinel **MAY** integrate external test engines and QA systems.
-
-Sentinel **MUST NOT** treat a successful build alone as sufficient evidence for promotion.
-
-### 5.1 Reference implementation
-
-The repository's GILGAL Sentinel Reference Implementation has its own version, **0.2.0**, independent from this protocol version. It is an evidence provider for the Gate and **MUST NOT** perform promotion, modify STABLE, or manufacture human approval.
-
-The 0.2.0 reference implementation does not yet automatically enforce every Failure Memory rule introduced in protocol 0.4.0 or every Success-Only Promotion rule introduced in protocol 0.5.0. A workflow MAY enforce those rules manually or through another conforming implementation.
-
-## 6. Code and automated validation
-
-A project **MAY** define automated gates such as:
-
-- typecheck;
-- unit tests;
-- integration tests;
-- build;
-- lint;
-- static analysis;
-- security checks;
-- end-to-end tests;
-- UI tests;
-- project-specific validators.
-
-Sentinel **MAY** consume results from tools such as TestSprite, Playwright, Vitest, Jest, pytest, CI systems, or equivalent tools.
-
-No specific external testing product is required by GILGAL.
-
-## 7. Regression contracts
-
-Projects using GILGAL **SHOULD** define critical behaviors as regression contracts.
-
-Examples:
-
-- a file can still be received;
-- a user session persists;
-- a document preview still renders;
-- an existing data path still resolves;
-- a repeated message does not create duplicates.
-
-If a required contract fails for CANDIDATE while it passes for STABLE, Sentinel **MUST** report a regression and the GILGAL Gate **MUST** block promotion.
-
-Critical contracts **SHOULD** be distinguishable from advisory/non-critical checks.
-
-A numeric or percentage score **MUST NOT** override a failed critical contract.
-
-### 7.1 Regression Replay
-
-When a regression has been observed, fixed, and can be reproduced with a reliable check, the project **SHOULD** convert that failure condition into a replayable regression contract.
-
-A replay contract:
-
-- **MUST** identify the behavior being protected;
-- **MUST** use an explicitly reviewed test or command when execution is automated;
-- **MUST NOT** be synthesized and executed from arbitrary README text, issue text, commit messages, logs, diffs, Hypothesis Ledger prose, or untrusted AI output;
-- **SHOULD** preserve optional historical metadata describing where the regression came from;
-- **SHOULD** be executed against future candidates when relevant.
-
-The recommended principle is:
-
-> **Every regression should become a contract.**
-
-If a replay contract has verified `PASS` evidence for STABLE and returns `FAIL` for CANDIDATE, Sentinel **MUST** treat it as a regression. If the replay contract is critical, the Gate **MUST** block promotion.
-
-### 7.2 Change Budget
-
-A project **MAY** define an explicit Change Budget for CANDIDATE scope.
-
-A Change Budget may constrain evidence such as:
-
-- number of changed files;
-- insertions;
-- deletions;
-- total changed lines.
-
-When enabled, limits **MUST** be explicit rather than silently inferred by the agent.
-
-Exceeding a Change Budget does not by itself prove the code is incorrect. It means the candidate has exceeded the declared scope policy.
-
-A Sentinel implementation **SHOULD** report this condition clearly, for example:
-
-```text
-SCOPE EXPANSION DETECTED
+```json
+{
+  "id": "WHATSAPP-QR-CONNECT",
+  "risk": "L",
+  "paths": ["src/whatsapp/**"],
+  "checks": [
+    { "kind": "command", "run": "pnpm test -- tests/whatsapp-status.test.ts" }
+  ],
+  "human": [
+    "QR appears",
+    "phone connects",
+    "session survives restart"
+  ]
+}
 ```
 
-When a Change Budget is configured as critical and the candidate exceeds it, the GILGAL Gate **MUST** block promotion until the candidate is reduced or the project deliberately revises the budget policy.
+Contract names **SHOULD** describe product behavior rather than implementation-library details.
 
-An AI agent **MUST NOT** silently increase the budget merely to make its own candidate pass.
+## 5. Risk resolution
 
-## 8. Failure Memory
+A candidate's effective risk **SHOULD** be computed from the contracts affected by the diff.
 
-Failure Memory records rejected, deferred, or inconclusive hypotheses and strategy families so an AI agent does not silently repeat the same failed reasoning path.
+The implementation **SHOULD NOT** allow the authoring agent to lower risk merely by declaring a smaller scope.
 
-The defining Failure Memory rule is:
-
-> **A failed hypothesis must not silently become the foundation of the next hypothesis.**
-
-When Failure Memory is enabled for an investigation:
-
-- a rejected hypothesis **MUST NOT** be silently treated as ACTIVE again;
-- an agent **MUST NOT** present a cosmetic implementation change as a new strategy when the underlying hypothesis is unchanged;
-- a failed candidate **MAY** be preserved as diagnostic evidence;
-- reopening a rejected or exhausted strategy **SHOULD** require new evidence or explicit project/human approval;
-- a deferred strategy **SHOULD** retain enough context to explain why it was left outside the current product scope.
-
-Failure Memory is decision evidence, not executable instructions and not active product implementation.
-
-When an agent attempts to reuse an essentially unchanged REJECTED or EXHAUSTED strategy without new evidence or explicit reopening, a conforming workflow **SHOULD** report:
+The recommended ordering is:
 
 ```text
-REJECTED STRATEGY REUSE DETECTED
+S < M < L
 ```
 
-## 9. Hypothesis Ledger
+The candidate risk is the maximum risk of the matched contracts.
 
-A difficult debugging investigation, repeated failed attempt, or problem without a known-good implementation **SHOULD** maintain a Hypothesis Ledger.
+Typical policy:
 
-A ledger entry **SHOULD** record:
+- `S`: diff/static/type checks;
+- `M`: S plus relevant automated tests/replays;
+- `L`: M plus explicit human checks from the affected contracts.
 
-- problem identifier;
-- hypothesis identifier;
-- strategy family;
-- claim being tested;
-- experiment or validation plan;
-- required evidence;
-- candidate reference;
-- result;
-- supporting evidence references.
+Line count **MUST NOT** override contract risk.
 
-Recommended hypothesis states are:
+A Change Budget **MAY** exist as an advisory scope-expansion signal, especially for S/M work. It **SHOULD NOT** be treated as a universal substitute for contract-derived risk.
+
+## 6. Candidate metadata
+
+A candidate **SHOULD** store machine-readable state including at least:
+
+- `baseStableSha`;
+- current candidate SHA when available;
+- status;
+- hypothesis/intent;
+- strategy family when Failure Memory applies;
+- affected contracts;
+- effective risk.
+
+Recommended statuses:
 
 ```text
-ACTIVE
-CONFIRMED
+draft
+checking
+pending-human
+passed
+failed
+rejected
+```
+
+Human-written Markdown such as `READY`, `VERIFIED`, or `PASS` **MUST NOT** be treated as promotion authority by itself.
+
+## 7. Failure Memory
+
+Failure Memory uses three core decision states:
+
+```text
 REJECTED
-INCONCLUSIVE
 DEFERRED
+EXHAUSTED
 ```
 
-An AI agent **MUST NOT** mark a hypothesis CONFIRMED when the required evidence has not been produced.
+Each relevant entry **SHOULD** include:
 
-Human-only evidence remains subject to the human-validation requirements in this specification.
+- strategy `family`;
+- `status`;
+- `reason`;
+- supporting `evidence` references;
+- `reopenWhen` criteria.
 
-A ledger **MUST NOT** be treated as a trusted shell script or command source.
+An `EXHAUSTED` family **MUST NOT** be silently repeated as if it were new merely because files, classes, wrappers, branches, or adapters were renamed.
 
-## 10. Candidate Families and Strategy Exhaustion
+Reopening an exhausted family **SHOULD** require new evidence or explicit recorded reauthorization.
 
-A Candidate Family groups candidates that test the same underlying strategy.
+`DEFERRED` **MUST NOT** be interpreted as permanently rejected.
 
-A project **MAY** mark a family **EXHAUSTED** when evidence has repeatedly rejected that strategy or when the project explicitly decides not to spend more attempts on it without new information.
+## 8. Hypothesis handling
 
-If a family is EXHAUSTED:
+The active hypothesis **SHOULD** live in the current candidate metadata.
 
-- an AI agent **MUST NOT** silently create another candidate in the same family;
-- reopening the family **SHOULD** cite new evidence or explicit authorization;
-- the reopening reason **SHOULD** be recorded in the Hypothesis Ledger.
+A separate Hypothesis Ledger **MAY** be used for complex research, but is not required by the minimal protocol.
 
-GILGAL does not require a fixed retry count. Strategy Exhaustion is based on evidence and explicit policy, not arbitrary numerical punishment.
+When a failed hypothesis matters to future work, the durable decision **SHOULD** be written into Failure Memory.
 
-Renaming a class, file, branch, wrapper, adapter, or other cosmetic implementation detail **MUST NOT** by itself cause an otherwise unchanged rejected strategy to be treated as a new strategy family.
+## 9. Check and evidence
 
-## 11. Branching / Divergence
+Before promotion, the implementation **MUST** compare WORK against its recorded STABLE base or current valid STABLE according to the promotion policy.
 
-When competing hypotheses exist, candidates **SHOULD** branch from the same verified STABLE base whenever practical.
+`check` **SHOULD**:
 
-A candidate **MAY** continue from an earlier candidate only when:
+1. determine the candidate diff;
+2. match affected contracts from their mapped code surfaces;
+3. compute effective risk;
+4. consult Failure Memory when a strategy family is present;
+5. execute explicitly reviewed automated checks;
+6. record results for the exact candidate SHA;
+7. enter `pending-human` when required human checks remain.
 
-- the original hypothesis remains ACTIVE; and
-- the new candidate is an explicit refinement of that same experiment.
+Evidence **MUST NOT** be considered valid for another candidate SHA without explicit revalidation.
 
-A candidate based on a REJECTED hypothesis **SHOULD NOT** become the foundation of a different hypothesis without an explicit reason.
+A SHA binding proves which code the evidence belongs to. It does **not** prove that a physical/human observation actually occurred.
 
-Recommended shape:
+## 10. Human checks
+
+Risk-L contracts **SHOULD** define a small, objective list of human checks.
+
+A human check record **SHOULD** identify:
+
+- contract/check identifier;
+- result;
+- actor or operator identifier suitable for the project;
+- timestamp;
+- candidate SHA.
+
+An AI agent **MUST NOT** manufacture human approval.
+
+If the candidate SHA changes after a human check, the implementation **MUST** determine whether that check remains valid or requires re-execution.
+
+## 11. Promote as Gate
+
+Promotion **MUST** be blocked unless all required conditions are satisfied.
+
+A conforming `promote` **MUST** refuse when any of the following applies:
+
+- candidate status is not `passed`;
+- required automated evidence is missing/failing;
+- required human evidence is missing;
+- evidence does not match the current candidate SHA;
+- candidate base/STABLE relationship is no longer valid under the project's promotion policy;
+- an exhausted strategy is being reused without required reopening/evidence when that rule is enabled.
+
+Promotion **MUST NOT** hide a silent AI-performed rebase and then claim the previous evidence still applies.
+
+A recommended safe rule is:
 
 ```text
-                    STABLE
-                      │
-        ┌─────────────┼─────────────┐
-        │             │             │
-   CANDIDATE A   CANDIDATE B   CANDIDATE C
-   strategy A    strategy B    strategy C
-        │             │             │
-     Sentinel      Sentinel      Sentinel
-        └─────────────┼─────────────┘
-                      │
-              COMPARATIVE GATE
+recorded baseStableSha is still valid
+candidate evidence SHA == candidate SHA being promoted
+status == passed
 ```
 
-## 12. Comparative Gate
+Promotion **SHOULD** use an explicit version-control operation such as fast-forward or another project-approved merge strategy whose resulting code is the code that was checked.
 
-A GILGAL implementation **MAY** compare multiple candidates using a Comparative Gate.
+## 12. Reject
 
-The Comparative Gate:
+`reject` **MUST NOT** modify STABLE merely to preserve the failed implementation.
 
-- **MUST NOT** select a candidate that fails required critical evidence merely because it is better than the alternatives;
-- **SHOULD** compare candidates using explicit evidence rather than agent confidence or patch count;
-- **MUST** preserve human-only requirements;
-- **MUST** return no winner when no candidate satisfies the required Gate conditions.
+A rejection **SHOULD**:
 
-A candidate that wins a comparison is still not automatically promoted.
+- mark the candidate rejected/failed;
+- update Failure Memory when the result contains reusable investigation knowledge;
+- archive or remove WORK according to project policy.
 
-## 13. Runtime validation
+> **Verified success becomes product. Failure becomes knowledge.**
 
-Sentinel **MAY** inspect runtime evidence including:
+## 13. Minimal data model
 
-- crashes;
-- unhandled exceptions;
-- unexpected process exits;
-- retry loops;
-- timeout loops;
-- render loops;
-- failed state transitions;
-- resource warnings;
-- application logs.
-
-Runtime evidence **MUST NOT** expose secrets, tokens, customer files, or other sensitive data unnecessarily.
-
-## 14. Human-only validation
-
-Some checks depend on real-world observation, hardware, external accounts, or subjective acceptance.
-
-Examples include:
-
-- physical printing;
-- hardware-device behavior;
-- real external-service login/session behavior;
-- installation on a second machine;
-- user acceptance of visual output.
-
-An AI agent **MUST NOT** mark such a check as passed unless an authorized human or trusted external test source provides that evidence.
-
-Without such evidence, the status **SHOULD** be PENDING or NOT TESTED.
-
-## 15. Sentinel result vocabulary
-
-Recommended statuses are:
+A minimal implementation MAY use:
 
 ```text
-PASS
-FAIL
-PENDING
-NOT TESTED
-BLOCKED
+.gilgal/
+  state.json
+  contracts.json
+  memory.json
+  evidence/
 ```
 
-An implementation **MUST NOT** report PASS when the relevant validation was not actually executed.
+Recommended responsibilities:
 
-## 16. Sentinel report
+- `state.json`: STABLE/WORK identity, candidate status, hypothesis and strategy family;
+- `contracts.json`: product contract, risk, paths, automated and human checks;
+- `memory.json`: REJECTED/DEFERRED/EXHAUSTED decisions and reopening criteria;
+- `evidence/<sha>.json`: checks performed for one exact candidate.
 
-A Sentinel report **SHOULD** identify:
+## 14. Minimal command surface
 
-- STABLE reference;
-- CANDIDATE reference;
-- diff summary;
-- Change Budget status when configured;
-- code-check status;
-- automated-test status;
-- regression replay results;
-- regression-check status;
-- runtime-check status;
-- human-check status;
-- critical regressions found;
-- final promotion recommendation.
-
-When Failure Memory is in use, a report **SHOULD** also identify:
-
-- problem/hypothesis identifier;
-- strategy family;
-- hypothesis state;
-- whether the family is exhausted;
-- whether the candidate is based on a rejected hypothesis;
-- relevant comparison candidates when a Comparative Gate is used.
-
-When Success-Only Promotion is in use, a promotion report **SHOULD** distinguish:
-
-- implementation that becomes active STABLE product state;
-- investigation evidence that remains Failure Memory, Hypothesis Ledger, FAILED/DEFERRED history, or Regression Replay metadata.
-
-## 17. Promotion gate
-
-Promotion from CANDIDATE to STABLE **MUST** be blocked when any required gate fails or remains pending when that pending check is mandatory.
-
-Promotion **SHOULD** require:
-
-- candidate based on the expected STABLE or an explicitly allowed ACTIVE-hypothesis refinement;
-- clean and reviewable diff;
-- required automated checks passing;
-- required regression contracts passing;
-- required replay contracts passing;
-- required manual approvals complete;
-- required Change Budget policy satisfied;
-- no unresolved merge conflict;
-- no unresolved critical Failure Memory violation when that policy is enabled.
-
-Promotion **SHOULD** be explicit rather than silent.
-
-## 18. Success-Only Promotion
-
-Protocol 0.5.0 introduces the normative **Success-Only Promotion** rule.
-
-The defining invariant is:
-
-> **The success becomes product. The failure becomes knowledge.**
-
-Or equivalently:
+A practical implementation SHOULD aim for a small interface:
 
 ```text
-STABLE = verified and approved implementation only
-FAILURE MEMORY = rejected/deferred/inconclusive reasoning and evidence
-REGRESSION REPLAY = executable protection against known reproducible failures
+gilgal start <hypothesis>
+gilgal check
+gilgal ok <contract> [check]
+gilgal promote
+gilgal reject
+gilgal status
 ```
 
-A GILGAL promotion:
+No command name is normative. The behavior is.
 
-- **MUST** promote only implementation that satisfies the required Gate evidence;
-- **MUST NOT** copy rejected or failed implementation into STABLE merely to preserve history;
-- **SHOULD** preserve important failed reasoning as Failure Memory or Hypothesis Ledger evidence;
-- **SHOULD** preserve a failed candidate as FAILED only when doing so is useful for diagnosis or audit;
-- **SHOULD** convert reproducible fixed regressions into Regression Replay contracts when practical;
-- **MUST NOT** treat historical preservation as a reason to keep rejected behavior active in the product;
-- **SHOULD** distinguish DEFERRED work from REJECTED work;
-- **SHOULD** make clear in promotion evidence what becomes product and what remains investigation knowledge.
+## 15. Optional mechanisms
 
-Product memory and investigation memory are intentionally different:
+The following remain compatible extensions but are not required by the minimal core:
 
-```text
-PRODUCT / EXECUTABLE MEMORY
-  approved behavior present in STABLE
+- a standalone/permanent Sentinel process;
+- a separate Hypothesis Ledger;
+- parallel Candidate Families and Comparative Gate;
+- Change Budget as more than advisory scope evidence;
+- extensive cryptographic signing of human check text;
+- visible protocol-version rituals in normal operation.
 
-INVESTIGATION MEMORY
-  failed, rejected, deferred, or inconclusive reasoning and evidence
+Implementations **MAY** add them when they solve a real project need without weakening the core invariants.
 
-REGRESSION REPLAY
-  executable guard against a known reproducible failure
-```
+## 16. Core invariants
 
-## 19. Promotion
+1. **STABLE is not the laboratory.**
+2. **Risk comes from affected product contracts, not author confidence or line count.**
+3. **Evidence belongs to an exact candidate.**
+4. **Risk L includes required human observation.**
+5. **An exhausted strategy is not new because it was renamed.**
+6. **Promotion is explicit and refuses when evidence is incomplete or stale.**
+7. **The agent that writes the change does not gain unilateral authority to declare it production-ready.**
 
-A successful promotion creates a new STABLE state.
+For an agent with very little context, two rules preserve the spirit of GILGAL:
 
-Version-control-native mechanisms **SHOULD** be preferred over raw directory copying.
+> **Do not edit STABLE.**
 
-When possible, a promotion **SHOULD** preserve an easy rollback reference such as a tag or immutable commit.
-
-A successful promotion **MUST NOT** be used as an excuse to retain rejected implementation as active code when that implementation is not required by the approved candidate.
-
-## 20. Rejection
-
-When a candidate fails:
-
-- STABLE **MUST** remain unchanged;
-- the candidate **MAY** be fixed and retested while its hypothesis remains ACTIVE;
-- the candidate **MAY** be archived as FAILED;
-- the candidate **MAY** be discarded after safe confirmation;
-- a REJECTED hypothesis **SHOULD** be recorded in Failure Memory when that investigation uses the ledger;
-- a new hypothesis **SHOULD** prefer a fresh branch from STABLE rather than silently inheriting the rejected candidate;
-- rejected implementation **MUST NOT** be promoted merely to retain its history.
-
-## 21. Memory principle
-
-GILGAL treats the last working implementation as part of the agent's operational memory.
-
-Documentation explains intent. STABLE provides executable historical evidence.
-
-For regression diagnosis, the agent **SHOULD** compare known-good code and candidate code before inventing a replacement implementation.
-
-Regression Replay extends this principle by preserving reproducible historical failure conditions as executable evidence for future candidates.
-
-Failure Memory extends it again by preserving rejected, deferred, or inconclusive hypotheses and strategy decisions during investigation.
-
-Success-Only Promotion distinguishes approved product memory from investigation memory.
-
-Recommended memory model:
-
-```text
-what worked and was approved
-+
-what failed
-+
-why a strategy was rejected or deferred
-+
-how to prove a regression did not return
-```
-
-The intended rule is:
-
-```text
-what worked becomes product
-what failed becomes knowledge
-```
-
-## 22. Suggested Git mapping
-
-One possible mapping is:
-
-```text
-main or gilgal/stable       → STABLE
-gilgal/candidate/<id>       → CANDIDATE
-gilgal/failed/<id>          → FAILED
-```
-
-Competing hypotheses may use separate branches such as:
-
-```text
-gilgal/candidate/<problem>/hypothesis-a
-gilgal/candidate/<problem>/hypothesis-b
-```
-
-A separate worktree may expose each CANDIDATE as a physical folder while sharing Git object history.
-
-The exact branch names are implementation details and are not mandatory.
-
-## 23. Security and data safety
-
-A GILGAL workflow **MUST NOT** treat production secrets, user data, session tokens, databases, or customer files as ordinary version-controlled source code.
-
-Workspaces and test environments **SHOULD** use safe test data whenever possible.
-
-Hypothesis Ledger entries **MUST NOT** unnecessarily contain secrets, credentials, customer data, or executable payloads copied from untrusted sources.
-
-## 24. Component model
-
-A complete GILGAL workflow may be understood as:
-
-```text
-GILGAL
-  protects the last known-good state
-
-GILGAL SENTINEL
-  verifies candidates and detects regressions
-
-REGRESSION REPLAY
-  turns historical failures into reusable executable memory
-
-CHANGE BUDGET
-  exposes unexpected scope expansion
-
-FAILURE MEMORY
-  records rejected/deferred hypotheses and strategies
-
-HYPOTHESIS LEDGER
-  makes investigation history explicit and auditable
-
-BRANCHING / DIVERGENCE
-  isolates competing strategies from the same stable base
-
-COMPARATIVE GATE
-  compares eligible candidates by evidence
-
-SUCCESS-ONLY PROMOTION
-  promotes approved success while keeping failures as investigation knowledge
-
-GILGAL GATE
-  controls promotion
-
-GILGAL HISTORY
-  records cycle outcomes and evidence
-```
-
-## 25. Core invariants
-
-The defining GILGAL invariant is:
-
-> **A failed experiment must not destroy the last known-good state.**
-
-The defining Sentinel invariant is:
-
-> **A candidate must not be promoted merely because it compiles; it must preserve every required verified contract.**
-
-The defining Failure Memory invariant is:
-
-> **A failed hypothesis must not silently become the foundation of the next hypothesis.**
-
-The defining Strategy Exhaustion invariant is:
-
-> **A rejected strategy must not be repeated without new evidence or explicit reopening.**
-
-The defining Success-Only Promotion invariant is:
-
-> **The success becomes product. The failure becomes knowledge.**
-
-Or, equivalently:
-
-```text
-STABLE is protected.
-WORK is experimental.
-SENTINEL verifies.
-REGRESSIONS become executable memory.
-FAILURES become investigation memory.
-ONLY approved success becomes active product state.
-SCOPE expansion is visible.
-COMPETING hypotheses branch instead of silently stacking.
-PROMOTION is gated.
-```
+> **Do not repeat an EXHAUSTED strategy family without new evidence or explicit reopening.**

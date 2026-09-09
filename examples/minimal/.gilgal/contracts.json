@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "contracts": [
+    {
+      "id": "WHATSAPP-QR-CONNECT",
+      "description": "QR appears, a phone connects, and the session survives restart.",
+      "risk": "L",
+      "paths": [
+        "src/whatsapp/**",
+        "src/main/whatsapp/**"
+      ],
+      "checks": [
+        {
+          "kind": "command",
+          "run": "pnpm test -- tests/whatsapp-status.test.ts"
+        }
+      ],
+      "human": [
+        "QR appears",
+        "phone connects",
+        "session survives restart"
+      ]
+    },
+    {
+      "id": "WORD-OPENS-DEFAULT-APP",
+      "description": "A received DOCX opens in the configured/default Word application.",
+      "risk": "L",
+      "paths": [
+        "src/files/**",
+        "src/windows/**"
+      ],
+      "checks": [],
+      "human": [
+        "DOCX opens in Word"
+      ]
+    },
+    {
+      "id": "UI-PRESENTATION",
+      "description": "Visual-only application presentation changes.",
+      "risk": "S",
+      "paths": [
+        "src/**/*.css",
+        "src/**/*.scss"
+      ],
+      "checks": [
+        {
+          "kind": "command",
+          "run": "pnpm typecheck"
+        }
+      ],
+      "human": []
+    }
+  ]
+}

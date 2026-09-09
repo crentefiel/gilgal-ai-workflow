@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "sha": "e4f5g6h",
+  "baseStableSha": "a1b2c3d",
+  "risk": "L",
+  "contracts": [
+    "WHATSAPP-QR-CONNECT"
+  ],
+  "checks": [
+    {
+      "kind": "command",
+      "command": "pnpm test -- tests/whatsapp-status.test.ts",
+      "exitCode": 0
+    }
+  ],
+  "human": [
+    {
+      "contract": "WHATSAPP-QR-CONNECT",
+      "check": "QR appears",
+      "result": "pass",
+      "actor": "operator",
+      "timestamp": "2026-09-09T12:00:00Z"
+    },
+    {
+      "contract": "WHATSAPP-QR-CONNECT",
+      "check": "phone connects",
+      "result": "pending"
+    },
+    {
+      "contract": "WHATSAPP-QR-CONNECT",
+      "check": "session survives restart",
+      "result": "pending"
+    }
+  ]
+}
