@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "family": "wppconnect-puppeteer",
+      "status": "EXHAUSTED",
+      "reason": "Repeated session/QR instability in the tested environment.",
+      "evidence": [
+        "candidate-017",
+        "candidate-021"
+      ],
+      "reopenWhen": [
+        "new architecture removes the previous failure cause",
+        "new reproducible evidence demonstrates stable restart behavior"
+      ]
+    },
+    {
+      "family": "advanced-print-bridge",
+      "status": "DEFERRED",
+      "reason": "Outside the current product scope.",
+      "evidence": [],
+      "reopenWhen": [
+        "product scope explicitly requires advanced native printing"
+      ]
+    }
+  ]
+}
