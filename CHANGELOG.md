@@ -2,6 +2,53 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## Simplified Core — 2026-09-09
+
+Refined the current GILGAL architecture to reduce operational ceremony while preserving the protocol's trust guarantees.
+
+### Current core
+
+The daily protocol is now expressed through four responsibilities:
+
+```text
+CONTRACTS
+  what must not break
+
+MEMORY
+  what the project already learned
+
+CHECK
+  what the exact candidate actually proved
+
+PROMOTE
+  refuses promotion until all required evidence is complete and current
+```
+
+### Changed
+
+- Risk is now explicitly derived from the **product contracts affected by the diff**, not line count or agent-declared scope.
+- Added the recommended `contract → paths → risk → automated checks → human checks` mapping.
+- Defined S/M/L as the operational risk model, with risk L requiring human checks declared by the contract.
+- Clarified that **Gate may be implemented as `promote` refusal logic** rather than a standalone service.
+- Reframed Sentinel as a verification/evidence function that may run inside `check`; a permanent Sentinel process is not required by the minimal protocol.
+- Folded the active hypothesis into candidate state; a separate Hypothesis Ledger is now optional rather than part of the minimal core.
+- Simplified Failure Memory to `REJECTED`, `DEFERRED`, and `EXHAUSTED`, with explicit `reopenWhen` criteria.
+- Clarified that `EXHAUSTED` means “do not repeat without new evidence or explicit reopening”, not “forbidden forever”.
+- Kept SHA-bound evidence, but limited its meaning: the SHA proves which candidate the evidence belongs to, not that a physical/human observation truly happened.
+- Reclassified Change Budget as optional/advisory scope evidence rather than a universal promotion gate.
+- Made Comparative Gate and multi-candidate branching optional extensions, not requirements of the daily flow.
+- Added explicit promotion freshness/idempotency requirements: candidate evidence must match the promoted SHA and silent AI rebases must not inherit stale evidence.
+- Added a minimal machine-readable model under `examples/minimal/.gilgal/`.
+- Removed visible protocol-version ceremony from the recommended operator workflow; historical 0.x documents remain as evolution records.
+
+### Operational rule
+
+> **WORK may say “finished”. Only GILGAL may say “passed”.**
+
+### Normative rule
+
+> **No actor declares that the product works. The contract does — and for risk L the contract includes a human check.**
+
 ## 0.5.0 — 2026-09-02
 
 Formalized **Success-Only Promotion** as a normative GILGAL protocol rule.
@@ -60,7 +107,7 @@ GILGAL 0.4.0 addresses that second failure mode.
 - **Hypothesis Ledger** for recording problem, hypothesis, strategy family, experiment, required evidence, candidate reference, result, and evidence.
 - **Candidate Families** to distinguish genuinely different strategies from cosmetic variations of the same approach.
 - **Strategy Exhaustion** so a rejected strategy cannot be silently repeated without new evidence or explicit reopening.
-- **Branching / Divergence** recommendation: competing hypotheses should branch from the same verified STABLE base whenever practical.
+- **Branching / Divergence** recommendation: competing hypotheses should branch from the same STABLE base whenever practical.
 - **Comparative Gate** for comparing independently verified candidates without selecting a candidate that still fails critical evidence.
 - Explicit relationship between Failure Memory and Regression Replay.
 
