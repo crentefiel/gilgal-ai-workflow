@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "stableSha": "a1b2c3d",
+  "candidate": {
+    "baseStableSha": "a1b2c3d",
+    "workSha": "e4f5g6h",
+    "status": "pending-human",
+    "hypothesis": "the current session store loses credentials after restart",
+    "strategyFamily": "baileys-session-store",
+    "risk": "L",
+    "contracts": [
+      "WHATSAPP-QR-CONNECT"
+    ]
+  }
+}
