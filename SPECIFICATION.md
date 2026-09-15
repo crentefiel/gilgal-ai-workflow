@@ -49,7 +49,7 @@ A candidate:
 A conforming minimal implementation needs four responsibilities:
 
 1. **Contracts** — define protected product behavior and evidence requirements.
-2. **Memory** — record rejected, deferred, or exhausted strategy families.
+2. **Memory** — record rejected, deferred, or exhausted strategy families and observed regressions.
 3. **Check** — calculate affected contracts/risk and collect evidence for the exact candidate.
 4. **Promote** — refuse promotion unless all required preconditions are satisfied.
 
@@ -148,17 +148,38 @@ DEFERRED
 EXHAUSTED
 ```
 
-Each relevant entry **SHOULD** include:
+A rejection recorded by `reject` **MUST** include a `kind` field with exactly one of:
 
+```text
+strategy
+hypothesis
+```
+
+`kind: "strategy"` means the implementation approach or strategy failed. Strategy rejections **SHOULD** identify the strategy `family`. Only strategy entries may contribute to marking a family `EXHAUSTED`.
+
+`kind: "hypothesis"` means the premise being tested was wrong. A hypothesis rejection **MUST NOT** mark its strategy family `EXHAUSTED` merely because that premise failed. Reopening a rejected hypothesis **MUST** require a materially new premise; new evidence about the same strategy alone does not make the rejected premise valid again.
+
+Each relevant strategy entry **SHOULD** include:
+
+- `kind: "strategy"`;
 - strategy `family`;
 - `status`;
 - `reason`;
 - supporting `evidence` references;
 - `reopenWhen` criteria.
 
+Each relevant hypothesis entry **SHOULD** include:
+
+- `kind: "hypothesis"`;
+- the rejected `hypothesis`/premise;
+- `status: "REJECTED"`;
+- `reason`;
+- supporting `evidence` references;
+- `reopenWhen` criteria that require a new premise.
+
 An `EXHAUSTED` family **MUST NOT** be silently repeated as if it were new merely because files, classes, wrappers, branches, or adapters were renamed.
 
-Reopening an exhausted family **SHOULD** require new evidence or explicit recorded reauthorization.
+Reopening an exhausted strategy family **SHOULD** require new evidence or explicit recorded reauthorization.
 
 `DEFERRED` **MUST NOT** be interpreted as permanently rejected.
 
@@ -168,7 +189,7 @@ The active hypothesis **SHOULD** live in the current candidate metadata.
 
 A separate Hypothesis Ledger **MAY** be used for complex research, but is not required by the minimal protocol.
 
-When a failed hypothesis matters to future work, the durable decision **SHOULD** be written into Failure Memory.
+When a failed hypothesis matters to future work, the durable decision **SHOULD** be written into Failure Memory with `kind: "hypothesis"`.
 
 ## 9. Check and evidence
 
@@ -215,7 +236,8 @@ A conforming `promote` **MUST** refuse when any of the following applies:
 - required human evidence is missing;
 - evidence does not match the current candidate SHA;
 - candidate base/STABLE relationship is no longer valid under the project's promotion policy;
-- an exhausted strategy is being reused without required reopening/evidence when that rule is enabled.
+- an exhausted strategy is being reused without required reopening/evidence when that rule is enabled;
+- any contract covered by the promotion is `INCOMPLETE` because of an unresolved `regress` record and no fresh required `check` and/or `ok` evidence has re-established that contract after the regression.
 
 Promotion **MUST NOT** hide a silent AI-performed rebase and then claim the previous evidence still applies.
 
@@ -225,13 +247,18 @@ A recommended safe rule is:
 recorded baseStableSha is still valid
 candidate evidence SHA == candidate SHA being promoted
 status == passed
+all affected contract assurance states are complete
 ```
 
 Promotion **SHOULD** use an explicit version-control operation such as fast-forward or another project-approved merge strategy whose resulting code is the code that was checked.
 
-## 12. Reject
+## 12. Reject and regress
+
+### 12.1 Reject
 
 `reject` **MUST NOT** modify STABLE merely to preserve the failed implementation.
+
+When `reject` writes reusable investigation knowledge to Failure Memory, the record **MUST** include `kind: "strategy"` or `kind: "hypothesis"` according to §7.
 
 A rejection **SHOULD**:
 
@@ -239,7 +266,34 @@ A rejection **SHOULD**:
 - update Failure Memory when the result contains reusable investigation knowledge;
 - archive or remove WORK according to project policy.
 
+A strategy rejection may exhaust a strategy family when the evidence supports that decision. A hypothesis rejection records that the premise was wrong and **MUST NOT** exhaust the family merely because the premise failed.
+
 > **Verified success becomes product. Failure becomes knowledge.**
+
+### 12.2 Regress
+
+A practical implementation **SHOULD** provide behavior equivalent to:
+
+```text
+gilgal regress <contract> "<operator observation>"
+```
+
+`regress` records that behavior previously accepted for an already-promoted product state has been observed failing later.
+
+`regress` **MUST**:
+
+1. mark the referenced contract assurance state `INCOMPLETE`;
+2. append a regression record to `memory.json` (or equivalent durable Memory) containing at least:
+   - the SHA that had been promoted when the regression was reported;
+   - the contract identifier;
+   - the human/operator observation;
+   - references to previous evidence for that contract when such evidence exists;
+3. preserve previous evidence as history but **MUST NOT** let that old evidence clear the new regression;
+4. block the next promotion that relies on that contract until fresh required evidence is recorded after the regression — a new `check`, a new `gilgal ok`, or both, according to the contract's evidence requirements.
+
+`regress` **MUST NOT** move STABLE, perform rollback, reset branches, or restore an older build automatically.
+
+Rollback/restore is a separate explicit human action. A previous state is restored or promoted only when a human explicitly invokes the project's restore/promote workflow.
 
 ## 13. Minimal data model
 
@@ -255,9 +309,9 @@ A minimal implementation MAY use:
 
 Recommended responsibilities:
 
-- `state.json`: STABLE/WORK identity, candidate status, hypothesis and strategy family;
+- `state.json`: STABLE/WORK identity, candidate status, hypothesis and strategy family, plus contract assurance state such as `INCOMPLETE` after a regression;
 - `contracts.json`: product contract, risk, paths, automated and human checks;
-- `memory.json`: REJECTED/DEFERRED/EXHAUSTED decisions and reopening criteria;
+- `memory.json`: typed strategy/hypothesis decisions, REJECTED/DEFERRED/EXHAUSTED reopening criteria, and regression records;
 - `evidence/<sha>.json`: checks performed for one exact candidate.
 
 ## 14. Minimal command surface
@@ -270,8 +324,11 @@ gilgal check
 gilgal ok <contract> [check]
 gilgal promote
 gilgal reject
+gilgal regress <contract> "<operator observation>"
 gilgal status
 ```
+
+The stored result of `reject` **MUST** include `kind: "strategy"` or `kind: "hypothesis"`; an implementation MAY choose its own command-line syntax for selecting that kind.
 
 No command name is normative. The behavior is.
 
@@ -295,8 +352,11 @@ Implementations **MAY** add them when they solve a real project need without wea
 3. **Evidence belongs to an exact candidate.**
 4. **Risk L includes required human observation.**
 5. **An exhausted strategy is not new because it was renamed.**
-6. **Promotion is explicit and refuses when evidence is incomplete or stale.**
-7. **The agent that writes the change does not gain unilateral authority to declare it production-ready.**
+6. **A rejected hypothesis requires a new premise; it does not exhaust a strategy family by itself.**
+7. **A reported regression makes its contract INCOMPLETE until fresh evidence re-establishes it.**
+8. **`regress` never moves STABLE or performs rollback automatically.**
+9. **Promotion is explicit and refuses when evidence is incomplete or stale.**
+10. **The agent that writes the change does not gain unilateral authority to declare it production-ready.**
 
 For an agent with very little context, two rules preserve the spirit of GILGAL:
 
