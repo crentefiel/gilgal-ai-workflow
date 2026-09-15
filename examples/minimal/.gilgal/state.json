@@ -1,6 +1,12 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "stableSha": "a1b2c3d",
+  "contractStates": {
+    "WORD-OPENS-DEFAULT-APP": {
+      "status": "INCOMPLETE",
+      "regressedAtStableSha": "a1b2c3d"
+    }
+  },
   "candidate": {
     "baseStableSha": "a1b2c3d",
     "workSha": "e4f5g6h",
