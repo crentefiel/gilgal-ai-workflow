@@ -70,7 +70,7 @@ CONTRACTS
   o que não pode quebrar
 
 MEMORY
-  o que já aprendemos que falhou, foi adiado ou se esgotou
+  o que já aprendemos que falhou, foi adiado, se esgotou ou regrediu
 
 CHECK
   o que o candidato realmente provou
@@ -195,7 +195,7 @@ Failure Memory usa três estados operacionais:
 
 ```text
 REJECTED
-estratégia rejeitada pela evidência disponível
+estratégia ou hipótese rejeitada pela evidência disponível
 
 DEFERRED
 estratégia/capacidade adiada; pode voltar quando contexto ou prioridade mudar
@@ -204,9 +204,24 @@ EXHAUSTED
 família de estratégia já testada o suficiente para não ser repetida sem evidência nova
 ```
 
-Cada entrada deve guardar pelo menos:
+Quando `gilgal reject` grava conhecimento reutilizável, o registro também deve guardar `kind`:
 
 ```text
+strategy
+abordagem/estratégia falhou; pode contribuir para EXHAUSTED
+
+hypothesis
+premissa testada estava errada; NÃO esgota a família de estratégia
+```
+
+Para `kind: "strategy"`, a entrada deve identificar a `family` quando aplicável. Somente rejeições de estratégia podem tornar uma família `EXHAUSTED`.
+
+Para `kind: "hypothesis"`, a entrada registra a premissa rejeitada. Reabrir essa hipótese exige uma premissa materialmente nova; apenas trazer nova evidência sobre a mesma estratégia não torna a premissa antiga válida outra vez.
+
+Cada entrada de estratégia deve guardar pelo menos:
+
+```text
+kind
 family
 status
 reason
@@ -214,10 +229,22 @@ evidence
 reopenWhen
 ```
 
-Exemplo:
+Uma entrada de hipótese deve guardar pelo menos:
+
+```text
+kind
+hypothesis
+status
+reason
+evidence
+reopenWhen
+```
+
+Exemplo de estratégia:
 
 ```json
 {
+  "kind": "strategy",
   "family": "wppconnect-puppeteer",
   "status": "EXHAUSTED",
   "reason": "instabilidade recorrente na restauração de sessão",
@@ -225,6 +252,21 @@ Exemplo:
   "reopenWhen": [
     "nova arquitetura elimina a causa anterior",
     "nova evidência demonstra estabilidade após restart"
+  ]
+}
+```
+
+Exemplo de hipótese:
+
+```json
+{
+  "kind": "hypothesis",
+  "hypothesis": "o erro é causado exclusivamente por cache local",
+  "status": "REJECTED",
+  "reason": "o erro foi reproduzido com cache limpo",
+  "evidence": ["candidate-024"],
+  "reopenWhen": [
+    "uma premissa materialmente diferente explicar o comportamento observado"
   ]
 }
 ```
@@ -250,7 +292,7 @@ A hipótese ativa pode viver no próprio estado do candidato:
 }
 ```
 
-Se a hipótese falhar e for relevante para o futuro, a decisão vai para Failure Memory.
+Se a hipótese falhar e for relevante para o futuro, a decisão vai para Failure Memory com `kind: "hypothesis"`.
 
 Implementações podem manter um ledger mais rico para pesquisa complexa, mas ele é extensão opcional, não requisito do uso diário.
 
@@ -268,6 +310,8 @@ passed
 failed
 rejected
 ```
+
+Além do estado do candidato, implementações podem manter o estado de confiança de cada contrato. Quando uma regressão é reportada por `gilgal regress`, o contrato afetado fica `INCOMPLETE` até receber evidência nova suficiente.
 
 Não usar `READY`, `VERIFIED` ou `PASS` escritos manualmente em Markdown como autoridade de promoção.
 
@@ -292,6 +336,7 @@ gilgal check
 gilgal ok <contrato> [check]
 gilgal promote
 gilgal reject
+gilgal regress <contrato> "<frase do balcão>"
 gilgal status
 ```
 
@@ -328,13 +373,45 @@ Deve recusar promoção se:
 - faltar check humano obrigatório;
 - a evidência pertencer a outro SHA;
 - a STABLE tiver avançado desde a criação do candidato sem reconciliação explícita;
-- houver estratégia EXHAUSTED reutilizada sem reabertura/evidência nova quando essa política estiver habilitada.
+- houver estratégia EXHAUSTED reutilizada sem reabertura/evidência nova quando essa política estiver habilitada;
+- algum contrato coberto pela promoção estiver `INCOMPLETE` por regressão ainda não revalidada com novo `check` e/ou novo `gilgal ok`, conforme as exigências do contrato.
 
 Promoção deve ser explícita e não pode esconder rebase silencioso feito por agente.
 
 ### `gilgal reject`
 
 Registra a decisão relevante em Memory e encerra/arquiva o candidato sem modificar STABLE.
+
+Quando grava Memory, o reject deve guardar:
+
+```text
+kind: strategy | hypothesis
+```
+
+`strategy` representa uma abordagem que falhou e pode contribuir para `EXHAUSTED`.
+
+`hypothesis` representa uma premissa errada e não deve esgotar a família da estratégia só por isso. Reabertura de hipótese exige uma nova premissa.
+
+### `gilgal regress`
+
+Registra uma regressão observada depois que um SHA já havia sido promovido.
+
+Exemplo:
+
+```text
+gilgal regress FILE-ARRIVES-ONCE "o mesmo ficheiro chegou duas vezes no balcão"
+```
+
+O comando deve:
+
+1. marcar o contrato como `INCOMPLETE`;
+2. registrar em `memory.json` o SHA promovido, o contrato, a frase humana e a evidência antiga desse contrato quando existir;
+3. preservar a evidência antiga como histórico, mas impedir que ela encerre a regressão;
+4. bloquear a próxima promoção que dependa desse contrato até existir um novo `gilgal check`, um novo `gilgal ok`, ou ambos, conforme o contrato exigir.
+
+`gilgal regress` **não move STABLE sozinho** e **não faz rollback automático**.
+
+Se o operador quiser restaurar uma versão anterior, isso precisa ser uma ação humana explícita de restore/promote. A regressão apenas degrada a confiança do contrato; não escolhe sozinha qual versão deve entrar no lugar.
 
 ---
 
@@ -350,6 +427,7 @@ Antes de promover:
 baseStableSha == STABLE esperada
 candidate evidence SHA == WORK atual
 status == passed
+contratos afetados não estão INCOMPLETE sem revalidação nova
 ```
 
 Se STABLE avançou, a promoção é bloqueada até reconciliação explícita e novos checks quando necessários.
@@ -399,13 +477,13 @@ Responsabilidades:
 
 ```text
 state.json
-STABLE, WORK, status, hipótese e família ativa
+STABLE, WORK, status, hipótese, família ativa e estado de confiança de contratos
 
 contracts.json
 contrato, risco, paths, checks automáticos e humanos
 
 memory.json
-REJECTED / DEFERRED / EXHAUSTED + motivo + critério de reabertura
+rejects tipados strategy/hypothesis, REJECTED / DEFERRED / EXHAUSTED e regressões observadas
 
 evidence/<sha>.json
 checks realmente executados para aquele candidato
@@ -436,6 +514,8 @@ Esses recursos podem existir quando resolvem um problema real. Não devem ser ne
 Este repositório contém uma implementação de referência do GILGAL Sentinel em `sentinel/`.
 
 Ela permanece útil como motor de verificação e evidência, mas o **núcleo conceitual atual não exige que Sentinel seja um serviço separado**. Uma implementação futura pode reutilizar esse motor internamente em `gilgal check`.
+
+A CLI Sentinel existente não implementa atualmente o fluxo operacional `reject`/`promote`; por isso esta emenda não adiciona `regress` ao Sentinel 0.2.0 nem lhe concede autoridade de promoção.
 
 Documentos históricos de versões 0.x permanecem no repositório como registro da evolução do conceito. A fonte normativa atual é [`SPECIFICATION.md`](SPECIFICATION.md), e esta página é a explicação operacional do protocolo.
 
