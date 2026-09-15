@@ -156,6 +156,7 @@ This implementation version is independent from the GILGAL protocol version.
 ### Added
 
 - **Change Budget** check with explicit limits for changed files, insertions, deletions, and total changed lines.
+- `SCOPE EXPANSION DETECTED` failure evidence when a configured budget is exceeded.
 - `replay` contract type for previously fixed regressions.
 - Optional replay metadata through `origin` and `description`.
 - Dedicated Regression Replay summary in JSON and Markdown reports.
@@ -177,7 +178,7 @@ Extended the GILGAL protocol with **Regression Replay** and **Change Budget**.
 - Principle: **Every regression should become a contract** when the old failure can be reproduced reliably.
 - Regression Replay as executable memory of previously fixed failures.
 - Change Budget as an explicit scope policy for AI-generated candidate changes.
-- Rule that critical scope-budget violations block promotion until the candidate is reduced or policy is deliberately revised.
+- Rule that critical scope-budget violations block promotion until the candidate is reduced or the policy is deliberately revised.
 - Rule that an AI agent must not silently raise its own Change Budget to pass the Gate.
 - Expanded Sentinel report model to include replay and scope evidence.
 
