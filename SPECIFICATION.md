@@ -148,16 +148,10 @@ DEFERRED
 EXHAUSTED
 ```
 
-A rejection recorded by `reject` **MUST** include a `kind` field with exactly one of:
+Each rejection entry **MUST** record `kind`:
 
-```text
-strategy
-hypothesis
-```
-
-`kind: "strategy"` means the implementation approach or strategy failed. Strategy rejections **SHOULD** identify the strategy `family`. Only strategy entries may contribute to marking a family `EXHAUSTED`.
-
-`kind: "hypothesis"` means the premise being tested was wrong. A hypothesis rejection **MUST NOT** mark its strategy family `EXHAUSTED` merely because that premise failed. Reopening a rejected hypothesis **MUST** require a materially new premise; new evidence about the same strategy alone does not make the rejected premise valid again.
+- `strategy` — the approach failed. It may become `EXHAUSTED`.
+- `hypothesis` — the premise was wrong. It **MUST NOT** become `EXHAUSTED`. Reopening a `hypothesis` direction **REQUIRES** a new recorded premise, not merely new evidence for the same strategy.
 
 Each relevant strategy entry **SHOULD** include:
 
@@ -272,28 +266,25 @@ A strategy rejection may exhaust a strategy family when the evidence supports th
 
 ### 12.2 Regress
 
-A practical implementation **SHOULD** provide behavior equivalent to:
-
 ```text
-gilgal regress <contract> "<operator observation>"
+gilgal regress <CONTRACT> "<operator observation>"
 ```
 
-`regress` records that behavior previously accepted for an already-promoted product state has been observed failing later.
+Use this when an already-promoted STABLE violates a contract in real-world use.
 
 `regress` **MUST**:
 
-1. mark the referenced contract assurance state `INCOMPLETE`;
-2. append a regression record to `memory.json` (or equivalent durable Memory) containing at least:
-   - the SHA that had been promoted when the regression was reported;
-   - the contract identifier;
-   - the human/operator observation;
-   - references to previous evidence for that contract when such evidence exists;
-3. preserve previous evidence as history but **MUST NOT** let that old evidence clear the new regression;
-4. block the next promotion that relies on that contract until fresh required evidence is recorded after the regression — a new `check`, a new `gilgal ok`, or both, according to the contract's evidence requirements.
+- identify the contract, the SHA that had been promoted, and the human/operator observation;
+- set the contract to `INCOMPLETE`;
+- record the regression in `memory.json` (or equivalent durable Memory);
+- block promotion for that contract until a fresh `check`, a fresh `gilgal ok`, or both exist according to the contract's evidence requirements.
 
-`regress` **MUST NOT** move STABLE, perform rollback, reset branches, or restore an older build automatically.
+`regress` **MUST NOT**:
 
-Rollback/restore is a separate explicit human action. A previous state is restored or promoted only when a human explicitly invokes the project's restore/promote workflow.
+- move or replace STABLE by itself;
+- automatically roll back to the previous known-good state.
+
+Replacing a broken STABLE remains an explicit human decision through the project's `promote` / `restore` workflow.
 
 ## 13. Minimal data model
 
