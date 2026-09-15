@@ -1,7 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "entries": [
     {
+      "kind": "strategy",
       "family": "wppconnect-puppeteer",
       "status": "EXHAUSTED",
       "reason": "Repeated session/QR instability in the tested environment.",
@@ -15,6 +16,7 @@
       ]
     },
     {
+      "kind": "strategy",
       "family": "advanced-print-bridge",
       "status": "DEFERRED",
       "reason": "Outside the current product scope.",
@@ -22,6 +24,26 @@
       "reopenWhen": [
         "product scope explicitly requires advanced native printing"
       ]
+    },
+    {
+      "kind": "hypothesis",
+      "hypothesis": "the failure is caused exclusively by local cache state",
+      "status": "REJECTED",
+      "reason": "The failure was reproduced with a clean cache, so the premise was wrong.",
+      "evidence": [
+        "candidate-024"
+      ],
+      "reopenWhen": [
+        "a materially new premise explains the observed behavior"
+      ]
+    }
+  ],
+  "regressions": [
+    {
+      "promotedSha": "a1b2c3d",
+      "contract": "WORD-OPENS-DEFAULT-APP",
+      "observation": "A received document no longer opens in the expected desktop application.",
+      "previousEvidence": []
     }
   ]
 }

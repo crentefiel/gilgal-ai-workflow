@@ -2,6 +2,19 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## Reject kind + regress — 2026-09-15
+
+Added two focused protocol amendments without changing promotion authority or moving STABLE automatically.
+
+### Changed
+
+- `reject` records reusable Failure Memory with `kind: "strategy" | "hypothesis"`; strategy failures may contribute to `EXHAUSTED`, while a rejected hypothesis records a wrong premise and does not exhaust the strategy family by itself. Reopening a rejected hypothesis requires a materially new premise.
+- Added `gilgal regress <contract> "<operator observation>"`: it marks the contract `INCOMPLETE`, records the promoted SHA/contract/human observation/previous evidence when available, and blocks future promotion for that contract until fresh required `check` and/or `ok` evidence re-establishes it. `regress` never moves STABLE or performs automatic rollback.
+
+### Reference implementation note
+
+The existing Sentinel 0.2.0 CLI does not currently implement the operational `reject`/`promote` command surface, so this change updates the normative specification and minimal machine-readable example only; Sentinel receives no new promotion authority.
+
 ## Simplified Core — 2026-09-09
 
 Refined the current GILGAL architecture to reduce operational ceremony while preserving the protocol's trust guarantees.
