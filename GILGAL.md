@@ -204,19 +204,10 @@ EXHAUSTED
 família de estratégia já testada o suficiente para não ser repetida sem evidência nova
 ```
 
-Quando `gilgal reject` grava conhecimento reutilizável, o registro também deve guardar `kind`:
+Cada entrada de rejeição deve gravar `kind`:
 
-```text
-strategy
-abordagem/estratégia falhou; pode contribuir para EXHAUSTED
-
-hypothesis
-premissa testada estava errada; NÃO esgota a família de estratégia
-```
-
-Para `kind: "strategy"`, a entrada deve identificar a `family` quando aplicável. Somente rejeições de estratégia podem tornar uma família `EXHAUSTED`.
-
-Para `kind: "hypothesis"`, a entrada registra a premissa rejeitada. Reabrir essa hipótese exige uma premissa materialmente nova; apenas trazer nova evidência sobre a mesma estratégia não torna a premissa antiga válida outra vez.
+- `strategy` — a abordagem falhou. Pode ir a `EXHAUSTED`.
+- `hypothesis` — a premissa estava errada. Não pode ir a `EXHAUSTED`. Reabrir uma direção `hypothesis` exige nova premissa registada, não apenas nova evidência da mesma estratégia.
 
 Cada entrada de estratégia deve guardar pelo menos:
 
@@ -388,30 +379,28 @@ Quando grava Memory, o reject deve guardar:
 kind: strategy | hypothesis
 ```
 
-`strategy` representa uma abordagem que falhou e pode contribuir para `EXHAUSTED`.
+`strategy` significa que a abordagem falhou e pode contribuir para `EXHAUSTED`.
 
-`hypothesis` representa uma premissa errada e não deve esgotar a família da estratégia só por isso. Reabertura de hipótese exige uma nova premissa.
+`hypothesis` significa que a premissa estava errada e não pode ir a `EXHAUSTED`. Reabrir essa direção exige uma nova premissa registada, não apenas nova evidência da mesma estratégia.
 
 ### `gilgal regress`
 
-Registra uma regressão observada depois que um SHA já havia sido promovido.
-
-Exemplo:
-
 ```text
-gilgal regress FILE-ARRIVES-ONCE "o mesmo ficheiro chegou duas vezes no balcão"
+gilgal regress <CONTRATO> "<frase do balcão>"
 ```
+
+Usar quando um STABLE já promovido viola um contrato na vida real.
 
 O comando deve:
 
-1. marcar o contrato como `INCOMPLETE`;
-2. registrar em `memory.json` o SHA promovido, o contrato, a frase humana e a evidência antiga desse contrato quando existir;
-3. preservar a evidência antiga como histórico, mas impedir que ela encerre a regressão;
-4. bloquear a próxima promoção que dependa desse contrato até existir um novo `gilgal check`, um novo `gilgal ok`, ou ambos, conforme o contrato exigir.
+1. identificar contrato, SHA que tinha sido promovido e frase humana;
+2. pôr o contrato em `INCOMPLETE`;
+3. gravar a regressão em `memory.json`;
+4. bloquear `promote` desse contrato até existir `check` novo, `gilgal ok` novo, ou ambos conforme o contrato exigir.
 
-`gilgal regress` **não move STABLE sozinho** e **não faz rollback automático**.
+`gilgal regress` **não move nem substitui STABLE sozinho** e **não faz rollback automático para o known-good anterior**.
 
-Se o operador quiser restaurar uma versão anterior, isso precisa ser uma ação humana explícita de restore/promote. A regressão apenas degrada a confiança do contrato; não escolhe sozinha qual versão deve entrar no lugar.
+Trocar o STABLE quebrado continua decisão humana explícita por `promote` / `restore`.
 
 ---
 
