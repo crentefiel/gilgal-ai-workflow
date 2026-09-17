@@ -2,6 +2,11 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## 0.5.1 — 2026-09-17
+
+- Candidate identity is now the `HEAD` of the current worktree for check, human approval, and promote; optional `.gilgal/worktrees.json` makes store/work roles explicit and prevents fixed-path success claims.
+- Dirty or non-executed checks must not create approval-valid CHECK evidence; abort logs are non-authoritative, and gate-code changes are risk L candidates separate from product approval.
+
 ## Reject kind + regress — 2026-09-15
 
 - `reject` now distinguishes `kind: strategy | hypothesis`: strategy may become `EXHAUSTED`; hypothesis must not, and reopening it requires a new recorded premise.
