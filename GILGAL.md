@@ -100,7 +100,15 @@ PDF-OPEN-OR-MONTAGE
 NO-AUTO-PRINT
 ```
 
-Um contrato deve mapear comportamento para superfície de código e evidência necessária.
+Cada contrato em `contracts.json` deve ter:
+
+```text
+id
+risk: S | M | L
+paths[]
+tests[]
+human[]
+```
 
 Exemplo conceitual:
 
@@ -112,8 +120,8 @@ Exemplo conceitual:
     "src/whatsapp/**",
     "src/main/whatsapp/**"
   ],
-  "checks": [
-    "pnpm test -- tests/whatsapp-status.test.ts"
+  "tests": [
+    { "run": "pnpm test -- tests/whatsapp-status.test.ts" }
   ],
   "human": [
     "QR aparece",
@@ -123,13 +131,17 @@ Exemplo conceitual:
 }
 ```
 
-Sem o mapa `contrato → paths`, risco por contrato vira opinião. Com o mapa, a implementação pode calcular o risco a partir do diff.
+Sem o mapa `contrato → paths`, risco por contrato vira opinião. Com o mapa, `git diff` + `contracts.json` determinam os contratos realmente atingidos.
+
+O agente não escolhe o contrato efetivamente atingido nem o próprio risco. O diff escolhe `contractsHit`; o maior risco entre esses contratos vira o risco efetivo do candidato.
+
+Opcionalmente pode existir `.gilgal/map.json` como índice humano de `módulo → paths → contract ids`. Esse índice não manda no Gate. Se `map.json` contradizer `contracts.json`, **ganha `contracts.json`**.
 
 ---
 
 ## 4. Risco S / M / L
 
-O risco vem dos contratos atingidos, não do número de linhas alteradas.
+O risco vem dos contratos atingidos pelo diff contra STABLE, não do número de linhas alteradas nem da declaração do agente.
 
 ```text
 S — baixo risco
@@ -145,7 +157,7 @@ ex.: sessão, WhatsApp, impressão, instalador, hardware
 check típico: M + checks humanos definidos no contrato
 ```
 
-A classificação efetiva de um candidato é o maior risco entre os contratos tocados pelo diff.
+A classificação efetiva de um candidato é o maior risco entre os contratos cujos `paths[]` intersectam o diff.
 
 Três linhas numa fronteira crítica podem ser L. Centenas de linhas de CSS podem continuar S.
 
@@ -161,29 +173,37 @@ GILGAL não precisa de uma camada cerimonial de “Evidence Integrity”. Precis
 
 Por isso, checks automáticos e humanos devem ser vinculados ao SHA atual do candidato.
 
-Exemplo:
+Um candidato pode declarar intenção:
+
+```json
+{
+  "hypothesis": "a persistência atual perde credenciais no restart",
+  "strategyFamily": "baileys-session-store",
+  "contractsClaimed": ["WHATSAPP-QR-CONNECT"]
+}
+```
+
+Mas `contractsClaimed` é só o mapa que o trabalho dizia que pretendia tocar. `gilgal check` calcula `contractsHit` a partir do diff e dos `paths[]` de `contracts.json`.
+
+Exemplo de evidência:
 
 ```json
 {
   "sha": "a1b2c3d",
-  "risk": "L",
-  "contracts": ["WHATSAPP-QR-CONNECT"],
-  "checks": [
+  "contractsClaimed": ["UI-PRESENTATION"],
+  "contractsHit": ["UI-PRESENTATION"],
+  "risk": "S",
+  "tests": [
     {
-      "command": "pnpm test",
+      "command": "pnpm typecheck",
       "exitCode": 0
     }
   ],
-  "human": [
-    {
-      "check": "QR aparece",
-      "result": "pass",
-      "user": "operador",
-      "timestamp": "2026-09-09T12:00:00Z"
-    }
-  ]
+  "human": []
 }
 ```
+
+Se `contractsHit` contiver um contrato que não está em `contractsClaimed`, quando essa claim existir, o `check` deve ficar **BLOCKED**: o trabalho saiu do mapa declarado.
 
 O SHA não prova que um comportamento físico aconteceu. Ele prova apenas que a evidência registrada pertence àquele candidato e não a outro código.
 
@@ -279,7 +299,8 @@ A hipótese ativa pode viver no próprio estado do candidato:
 ```json
 {
   "hypothesis": "a persistência atual perde credenciais no restart",
-  "strategyFamily": "baileys-session-store"
+  "strategyFamily": "baileys-session-store",
+  "contractsClaimed": ["WHATSAPP-QR-CONNECT"]
 }
 ```
 
@@ -310,9 +331,11 @@ Uma tela/status útil deve caber em poucas linhas:
 
 ```text
 STABLE   a1b2c3d   loja
-WORK     e4f5g6h   L
-CONTRACTS WHATSAPP-QR-CONNECT, FILE-ARRIVES-ONCE
-GATE     pending-human   faltam: QR, PDF
+WORK     e4f5g6h
+CLAIMED  UI-PRESENTATION
+HIT      UI-PRESENTATION
+RISK     S
+GATE     passed
 ```
 
 ---
@@ -323,6 +346,7 @@ A interface operacional deve ser pequena:
 
 ```text
 gilgal start <hipótese>
+gilgal scope
 gilgal check
 gilgal ok <contrato> [check]
 gilgal promote
@@ -337,15 +361,37 @@ Cria WORK/CANDIDATE a partir da STABLE atual, preferencialmente com Git worktree
 
 Não é necessário manter clones divergentes independentes.
 
+### `gilgal scope`
+
+Lê o diff contra STABLE — ou paths staged explicitamente selecionados — junto com `contracts.json` e imprime:
+
+```text
+contractsHit
+risco máximo
+tests[] exigidos
+human[] pendentes
+```
+
+`gilgal scope` não chama LLM para decidir contrato ou risco e não escreve STABLE.
+
 ### `gilgal check`
 
 1. calcula `diff STABLE..WORK`;
-2. resolve contratos cujos `paths` intersectam o diff;
-3. calcula o maior risco S/M/L;
-4. consulta Failure Memory;
-5. executa checks automáticos relevantes;
-6. grava evidência ligada ao SHA;
-7. deixa risco L em `pending-human` enquanto faltarem checks humanos.
+2. calcula `contractsHit` pelos `paths[]` de `contracts.json`;
+3. calcula o maior risco S/M/L entre os contratos hit;
+4. se existir `contractsClaimed` e algum `contractsHit` não estiver na claim, retorna `BLOCKED`;
+5. consulta Failure Memory;
+6. executa os `tests[]` dos contratos hit;
+7. grava evidência ligada ao SHA com `contractsClaimed` (se houver) e `contractsHit` calculado;
+8. se qualquer contrato hit for L e ainda houver `human[]` pendente, retorna `BLOCKED` / `pending-human`.
+
+Exemplo de expansão de escopo:
+
+```text
+contractsClaimed: UI-PRESENTATION
+contractsHit:     UI-PRESENTATION, WHATSAPP-QR-CONNECT
+GATE:             BLOCKED — saiu do mapa
+```
 
 ### `gilgal ok`
 
@@ -360,12 +406,15 @@ Se o SHA mudar depois da aprovação, a evidência correspondente deve ser reava
 Deve recusar promoção se:
 
 - o candidato não estiver `passed`;
-- faltar check automático obrigatório;
-- faltar check humano obrigatório;
+- faltar teste automático obrigatório;
+- houver contrato hit de risco L com `human[]` pendente;
+- existir `contractsClaimed` e `contractsHit` contiver contrato fora da claim;
 - a evidência pertencer a outro SHA;
 - a STABLE tiver avançado desde a criação do candidato sem reconciliação explícita;
 - houver estratégia EXHAUSTED reutilizada sem reabertura/evidência nova quando essa política estiver habilitada;
 - algum contrato coberto pela promoção estiver `INCOMPLETE` por regressão ainda não revalidada com novo `check` e/ou novo `gilgal ok`, conforme as exigências do contrato.
+
+`promote` não pode passar por cima de `contractsHit`, mismatch claimed/hit ou human pendente em risco L.
 
 Promoção deve ser explícita e não pode esconder rebase silencioso feito por agente.
 
@@ -416,6 +465,8 @@ Antes de promover:
 baseStableSha == STABLE esperada
 candidate evidence SHA == WORK atual
 status == passed
+contractsHit == resultado calculado por contracts.json + diff
+contractsClaimed (quando existir) cobre todos os contractsHit
 contratos afetados não estão INCOMPLETE sem revalidação nova
 ```
 
@@ -435,7 +486,7 @@ Regra prática recomendada:
 
 > Um contrato L deve tentar caber em poucos checks humanos objetivos e rápidos.
 
-Exemplo LAN House:
+Exemplo:
 
 ```text
 ✓ QR aparece
@@ -466,17 +517,19 @@ Responsabilidades:
 
 ```text
 state.json
-STABLE, WORK, status, hipótese, família ativa e estado de confiança de contratos
+STABLE, WORK, status, hipótese, família ativa, contractsClaimed e estado de confiança de contratos
 
 contracts.json
-contrato, risco, paths, checks automáticos e humanos
+fonte oficial de id, risk, paths[], tests[] e human[]
 
 memory.json
 rejects tipados strategy/hypothesis, REJECTED / DEFERRED / EXHAUSTED e regressões observadas
 
 evidence/<sha>.json
-checks realmente executados para aquele candidato
+contractsClaimed (se houver), contractsHit calculado, risco efetivo e checks executados para aquele candidato
 ```
+
+`.gilgal/map.json` pode existir como índice humano opcional, mas não participa da decisão oficial do Gate quando contradiz `contracts.json`.
 
 Veja [`examples/minimal/`](examples/minimal/) para um exemplo concreto.
 
@@ -504,7 +557,7 @@ Este repositório contém uma implementação de referência do GILGAL Sentinel 
 
 Ela permanece útil como motor de verificação e evidência, mas o **núcleo conceitual atual não exige que Sentinel seja um serviço separado**. Uma implementação futura pode reutilizar esse motor internamente em `gilgal check`.
 
-A CLI Sentinel existente não implementa atualmente o fluxo operacional `reject`/`promote`; por isso esta emenda não adiciona `regress` ao Sentinel 0.2.0 nem lhe concede autoridade de promoção.
+A CLI Sentinel existente não implementa atualmente o fluxo operacional `reject`/`promote`; esta documentação não lhe concede autoridade de promoção.
 
 Documentos históricos de versões 0.x permanecem no repositório como registro da evolução do conceito. A fonte normativa atual é [`SPECIFICATION.md`](SPECIFICATION.md), e esta página é a explicação operacional do protocolo.
 
@@ -518,6 +571,10 @@ Para o agente, duas regras bastam:
 
 > **Não edite STABLE.**  
 > **Não repita uma família EXHAUSTED sem evidência nova ou reabertura explícita.**
+
+E uma regra operacional de escopo:
+
+> **O agente pode declarar o que pretendia tocar; só o diff + contracts.json dizem o que realmente tocou.**
 
 E a síntese:
 
