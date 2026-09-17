@@ -84,14 +84,14 @@ PDF-OPEN-OR-MONTAGE
 NO-AUTO-PRINT
 ```
 
-Cada contrato pode mapear:
+Cada contrato em `contracts.json` deve mapear:
 
 ```text
-comportamento
-→ risco S/M/L
-→ paths de código
-→ checks automáticos
-→ checks humanos
+id
+→ risk S|M|L
+→ paths[] de código
+→ tests[] automáticos
+→ human[]
 ```
 
 Exemplo:
@@ -101,8 +101,8 @@ Exemplo:
   "id": "WHATSAPP-QR-CONNECT",
   "risk": "L",
   "paths": ["src/whatsapp/**"],
-  "checks": [
-    { "kind": "command", "run": "pnpm test -- tests/whatsapp-status.test.ts" }
+  "tests": [
+    { "run": "pnpm test -- tests/whatsapp-status.test.ts" }
   ],
   "human": [
     "QR aparece",
@@ -112,17 +112,23 @@ Exemplo:
 }
 ```
 
+O agente pode declarar a intenção em `contractsClaimed`, mas não escolhe os contratos realmente afetados. `gilgal check` calcula `contractsHit` por `git diff` contra STABLE + `paths[]` de `contracts.json`.
+
+Se existir `.gilgal/map.json`, ele é apenas índice humano. Quando divergir de `contracts.json`, o Gate usa `contracts.json`.
+
 ---
 
 ## Risco S / M / L
 
-O risco é calculado pelos contratos atingidos pelo diff, não pelo número de linhas alteradas.
+O risco é calculado pelos contratos atingidos pelo diff, não pelo número de linhas alteradas nem por declaração do agente.
 
 ```text
 S — texto, CSS, ícone
 M — SQLite, diretórios, lógica interna
 L — WhatsApp, sessão, impressão, instalador, hardware
 ```
+
+O risco efetivo é o maior risco entre `contractsHit`.
 
 Uma mudança de três linhas pode ser L. Uma mudança grande de CSS pode continuar S.
 
@@ -168,7 +174,9 @@ Isso responde:
 
 O SHA não prova que um humano realmente viu o QR ou recebeu o PDF. Ele apenas impede que uma prova de outro candidato seja reutilizada silenciosamente.
 
-Em risco L, o contrato inclui checks humanos objetivos.
+Quando houver `contractsClaimed`, a evidência também registra o `contractsHit` calculado. Se o diff atingir contrato fora da claim, o check fica `BLOCKED`.
+
+Em risco L, o contrato inclui checks humanos objetivos. Se algum `human[]` do contrato hit continuar pendente, o Gate permanece bloqueado.
 
 ---
 
@@ -178,12 +186,24 @@ Uma implementação prática deve caber em poucos comandos:
 
 ```text
 gilgal start <hipótese>
+gilgal scope
 gilgal check
 gilgal ok <contrato> [check]
 gilgal promote
 gilgal reject
 gilgal status
 ```
+
+`gilgal scope` lê o diff contra STABLE — ou paths staged explicitamente selecionados — mais `contracts.json` e imprime:
+
+```text
+contractsHit
+risco máximo
+tests[] exigidos
+human[] pendentes
+```
+
+Ele não chama LLM para decidir contrato/risco e não escreve STABLE.
 
 Fluxo:
 
@@ -192,11 +212,15 @@ gilgal start
   ↓
 WORK nasce da STABLE
   ↓
+gilgal scope
+  ↓
+diff → contractsHit → risco → tests → human pendente
+  ↓
 gilgal check
   ↓
-diff → contratos → risco → testes → evidence
+claimed cobre hit? não → BLOCKED
   ↓
-se L e faltam humanos: pending-human
+se L e faltam humanos → BLOCKED / pending-human
   ↓
 gilgal ok ...
   ↓
@@ -205,7 +229,7 @@ gilgal promote
 se tudo estiver válido: NEW STABLE
 ```
 
-`promote` deve bloquear se a evidência estiver incompleta, pertencer a outro SHA ou se a relação com a STABLE original tiver ficado inválida.
+`promote` não pode passar por cima de mismatch `contractsClaimed`/`contractsHit`, evidência incompleta, human pendente em risco L ou relação inválida com a STABLE original.
 
 Não existe “rebase silencioso e promove com a prova antiga”.
 
@@ -227,17 +251,19 @@ Responsabilidades:
 
 ```text
 state.json
-  STABLE, WORK, status, hipótese, strategy family
+  STABLE, WORK, status e intenção opcional: hipótese, strategyFamily, contractsClaimed
 
 contracts.json
-  contratos, risco, paths, checks automáticos e humanos
+  fonte oficial de id, risk, paths[], tests[], human[]
 
 memory.json
   REJECTED / DEFERRED / EXHAUSTED + reopenWhen
 
 evidence/<sha>.json
-  o que realmente foi verificado naquele candidato
+  contractsClaimed (se houver), contractsHit calculado, risco e o que foi verificado
 ```
+
+`.gilgal/map.json` pode existir como índice humano opcional, mas não substitui `contracts.json` no Gate.
 
 Um exemplo concreto está em [`examples/minimal/`](examples/minimal/).
 
@@ -282,6 +308,10 @@ Para um agente, duas regras preservam o protocolo:
 
 > **Não repita uma família EXHAUSTED sem evidência nova ou reabertura explícita.**
 
+E, para escopo:
+
+> **O agente pode declarar o que pretendia tocar; só o diff + contracts.json dizem o que realmente tocou.**
+
 ---
 
 ## English summary
@@ -297,6 +327,6 @@ Check     → what the exact candidate actually proved
 Promote   → refuses promotion until evidence is complete and current
 ```
 
-Risk is derived from affected product contracts, not line count or agent confidence. Risk-L contracts include explicit human checks. Evidence is bound to the candidate SHA. Rejected/deferred/exhausted strategy families live in Failure Memory. STABLE remains protected while WORK is allowed to fail.
+Scope and risk are derived from `contracts.json + git diff`, not from agent confidence. A candidate may record `contractsClaimed`; `check` computes `contractsHit`. If a hit falls outside the claim, the Gate is blocked. Risk-L hit contracts remain blocked while required human checks are pending. Evidence is bound to the candidate SHA, and STABLE remains protected while WORK is allowed to fail.
 
 > **GILGAL does not govern how AI works. It governs what may be called trustworthy.**
