@@ -266,6 +266,8 @@ O diretório [`sentinel/`](sentinel/) contém a implementação de referência h
 
 Ela continua útil como motor local de checks e evidência. O núcleo atual apenas deixa claro que Sentinel é uma função de verificação, não uma autoridade de promoção e não um requisito para existir como processo separado.
 
+**Spec 0.5.1; a implementação de referência pode continuar 0.2.0 até haver PR à parte.** Esta PR documenta invariantes do protocolo e não afirma que o Sentinel 0.2.0 já os implementa.
+
 Documentos históricos de versões 0.x permanecem no repositório para preservar a evolução do conceito.
 
 A fonte normativa atual é [`SPECIFICATION.md`](SPECIFICATION.md).
