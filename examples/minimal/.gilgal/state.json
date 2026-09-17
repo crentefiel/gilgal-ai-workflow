@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "stableSha": "a1b2c3d",
   "contractStates": {
     "WORD-OPENS-DEFAULT-APP": {
@@ -10,12 +10,11 @@
   "candidate": {
     "baseStableSha": "a1b2c3d",
     "workSha": "e4f5g6h",
-    "status": "pending-human",
-    "hypothesis": "the current session store loses credentials after restart",
-    "strategyFamily": "baileys-session-store",
-    "risk": "L",
-    "contracts": [
-      "WHATSAPP-QR-CONNECT"
+    "status": "passed",
+    "hypothesis": "the presentation change stays inside the visual-only contract",
+    "strategyFamily": "css-presentation",
+    "contractsClaimed": [
+      "UI-PRESENTATION"
     ]
   }
 }
