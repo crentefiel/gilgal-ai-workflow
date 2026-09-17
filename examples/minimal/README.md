@@ -17,21 +17,38 @@ Fluxo esperado:
 ```text
 start
   ↓
-state.json registra base STABLE + hipótese
+state.json registra base STABLE + intenção opcional (hypothesis / strategyFamily / contractsClaimed)
   ↓
-check
+scope / check
   ↓
-diff encontra contratos afetados
+git diff contra STABLE + contracts.json
   ↓
-risk = maior risco dos contratos
+contractsHit = contratos cujos paths[] intersectam o diff
   ↓
-checks automáticos geram evidence/<sha>.json
+risk = maior risk dos contractsHit
   ↓
-L com checks humanos pendentes → pending-human
+se contractsClaimed existe e não cobre todos os contractsHit → BLOCKED
+  ↓
+tests[] dos contractsHit geram evidence/<sha>.json
+  ↓
+se algum hit for L e human[] estiver pendente → BLOCKED / pending-human
   ↓
 ok registra a observação humana para o mesmo SHA
   ↓
 promote recusa enquanto qualquer pré-condição estiver pendente
 ```
+
+O exemplo de `evidence/e4f5g6h.json` mostra o caso feliz: `contractsClaimed` e `contractsHit` são ambos `UI-PRESENTATION`, o risco calculado é `S` e o teste exigido passou.
+
+Caso de expansão de escopo que deve ficar bloqueado:
+
+```text
+contractsClaimed: ["UI-PRESENTATION"]
+changed path:     src/whatsapp/session.ts
+contractsHit:     ["WHATSAPP-QR-CONNECT"]
+result:           BLOCKED — o diff saiu do mapa declarado
+```
+
+`gilgal scope` pode mostrar contratos hit, risco máximo, `tests[]` e `human[]` pendentes usando apenas diff/staged paths + `contracts.json`; não precisa chamar LLM e não escreve STABLE.
 
 A implementação real deve validar schemas, normalizar paths de forma segura e não executar comandos provenientes de conteúdo não confiável.

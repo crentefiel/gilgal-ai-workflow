@@ -2,6 +2,11 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## Scope claimed/hit — 2026-09-17
+
+- Scope and risk are now derived from `contracts.json + git diff`; an agent may state `contractsClaimed`, but `check` computes authoritative `contractsHit` and blocks any hit outside the claim.
+- Added `gilgal scope` to print hit contracts, maximum risk, required `tests[]`, and pending `human[]` without calling an LLM or writing STABLE; risk-L pending human checks remain blocked.
+
 ## Reject kind + regress — 2026-09-15
 
 - `reject` now distinguishes `kind: strategy | hypothesis`: strategy may become `EXHAUSTED`; hypothesis must not, and reopening it requires a new recorded premise.
