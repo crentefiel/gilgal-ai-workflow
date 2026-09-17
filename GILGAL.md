@@ -506,6 +506,8 @@ Este repositório contém uma implementação de referência do GILGAL Sentinel 
 
 Ela permanece útil como motor de verificação e evidência, mas o **núcleo conceitual atual não exige que Sentinel seja um serviço separado**. Uma implementação futura pode reutilizar esse motor internamente em `gilgal check`.
 
+**Spec 0.5.1; a implementação de referência pode continuar 0.2.0 até haver PR à parte.** Esta PR documenta invariantes do protocolo e não afirma que o Sentinel 0.2.0 já os implementa.
+
 A CLI Sentinel existente não implementa atualmente o fluxo operacional `reject`/`promote`; por isso esta emenda não adiciona `regress` ao Sentinel 0.2.0 nem lhe concede autoridade de promoção.
 
 Documentos históricos de versões 0.x permanecem no repositório como registro da evolução do conceito. A fonte normativa atual é [`SPECIFICATION.md`](SPECIFICATION.md), e esta página é a explicação operacional do protocolo.
