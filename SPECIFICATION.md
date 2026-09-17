@@ -1,5 +1,7 @@
 # GILGAL Specification
 
+**Protocol version: 0.5.1**
+
 This document defines the current normative core of the GILGAL protocol.
 
 The keywords **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** indicate requirement strength.
@@ -138,6 +140,10 @@ rejected
 
 Human-written Markdown such as `READY`, `VERIFIED`, or `PASS` **MUST NOT** be treated as promotion authority by itself.
 
+Candidate identity is local to the worktree where the command runs. The active candidate SHA **MUST** be resolved as `git rev-parse HEAD` in the current working directory/worktree. `check`, `ok` / `approve-manual`, and `promote` **MUST** use the same active-SHA resolver. They **MUST NOT** resolve the candidate by choosing a repository-global `gilgal/candidate/*` ref when multiple worktrees exist.
+
+SHA-bound evidence **MUST** belong to the current worktree HEAD. If the evidence SHA differs from that HEAD, the command **MUST** block with `STALE_EVIDENCE` and **MUST** print the evidence SHA, the current HEAD SHA, and the current worktree path.
+
 ## 7. Failure Memory
 
 Failure Memory uses three core decision states:
@@ -177,6 +183,20 @@ Reopening an exhausted strategy family **SHOULD** require new evidence or explic
 
 `DEFERRED` **MUST NOT** be interpreted as permanently rejected.
 
+Example strategy memory for a multi-worktree gate failure:
+
+```json
+{
+  "kind": "strategy",
+  "family": "gate-reads-sibling-worktree-ref",
+  "status": "EXHAUSTED",
+  "symptom": "STALE_EVIDENCE (other-worktree-sha vs HEAD)",
+  "reopenWhen": [
+    "approve/promote use HEAD of the current cwd; worktrees.json identifies the store when present; aborted checks do not produce valid CHECK evidence"
+  ]
+}
+```
+
 ## 8. Hypothesis handling
 
 The active hypothesis **SHOULD** live in the current candidate metadata.
@@ -200,6 +220,10 @@ Before promotion, the implementation **MUST** compare WORK against its recorded 
 7. enter `pending-human` when required human checks remain.
 
 Evidence **MUST NOT** be considered valid for another candidate SHA without explicit revalidation.
+
+If the working tree is dirty, or if required typecheck/tests/replays/build steps did not actually run, the checker **MUST NOT** write evidence that `ok`, `approve-manual`, or `promote` can treat as a valid `CHECK`. It **MAY** write an `ABORT-*.txt` file or diagnostic log instead, and approval commands **MUST** ignore abort records.
+
+A record with an implausibly short `wallClockMs` together with empty `artifacts: []` **MUST NOT** be accepted as successful check evidence. The implementation **MUST** classify it as `DECORATIVE_CONTRACT_PASS` or `ABORTED_CHECK`.
 
 A SHA binding proves which code the evidence belongs to. It does **not** prove that a physical/human observation actually occurred.
 
@@ -245,6 +269,8 @@ all affected contract assurance states are complete
 ```
 
 Promotion **SHOULD** use an explicit version-control operation such as fast-forward or another project-approved merge strategy whose resulting code is the code that was checked.
+
+Changes to `scripts/gilgal/**`, gate-enforcing Sentinel surfaces, or the active-SHA resolver such as `getActiveSha` are risk L gate changes. They **MUST** be handled as their own candidate and **MUST NOT** share the same human `ok` with an unrelated product contract such as licensing, messaging, or file handling. An agent **MUST NOT** edit the gate while a product `ok` / `promote` operation is in progress.
 
 ## 12. Reject and regress
 
@@ -296,7 +322,24 @@ A minimal implementation MAY use:
   contracts.json
   memory.json
   evidence/
+  worktrees.json   # optional
 ```
+
+A repository **MAY** have multiple Git worktrees. Each worktree **MUST** have at most one role: `store/stable`, `work/candidate`, or another candidate.
+
+An optional `.gilgal/worktrees.json` may make those roles explicit:
+
+```json
+{
+  "store": { "path": "...", "ref": "gilgal/stable" },
+  "work":  { "path": "...", "ref": "gilgal/candidate/<name>" },
+  "others": []
+}
+```
+
+If `worktrees.json` exists, `promote` **MUST** print `store.path` and state that this is the filesystem path expected to contain the new STABLE **before** moving the stable ref. If the map does not exist, `promote` **MUST** print the ref it intends to move and the current working directory, and **MUST NOT** claim that an unverified filesystem path was updated.
+
+When a store worktree is checked out at `gilgal/stable`, moving that ref is what causes that mapped store path to contain the promoted STABLE. This relationship **MUST** be reported explicitly rather than hidden behind a fixed-path success message.
 
 Recommended responsibilities:
 
@@ -348,6 +391,11 @@ Implementations **MAY** add them when they solve a real project need without wea
 8. **`regress` never moves STABLE or performs rollback automatically.**
 9. **Promotion is explicit and refuses when evidence is incomplete or stale.**
 10. **The agent that writes the change does not gain unilateral authority to declare it production-ready.**
+11. **Candidate identity is `HEAD` of the current worktree; `check`, human approval, and `promote` use the same resolver.**
+12. **If evidence SHA differs from current worktree `HEAD`, the command blocks with `STALE_EVIDENCE` and prints both SHAs and the worktree path.**
+13. **An aborted or non-executed check is not approval evidence; abort records are ignored by approval and promotion.**
+14. **Gate-code changes are risk L, use their own candidate, and do not share a product human approval.**
+15. **Before moving STABLE, `promote` identifies the mapped store path when available; without a map it reports only the ref and cwd it verified.**
 
 For an agent with very little context, two rules preserve the spirit of GILGAL:
 
