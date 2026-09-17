@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contracts": [
     {
       "id": "WHATSAPP-QR-CONNECT",
@@ -9,9 +9,8 @@
         "src/whatsapp/**",
         "src/main/whatsapp/**"
       ],
-      "checks": [
+      "tests": [
         {
-          "kind": "command",
           "run": "pnpm test -- tests/whatsapp-status.test.ts"
         }
       ],
@@ -29,7 +28,7 @@
         "src/files/**",
         "src/windows/**"
       ],
-      "checks": [],
+      "tests": [],
       "human": [
         "DOCX opens in Word"
       ]
@@ -42,9 +41,8 @@
         "src/**/*.css",
         "src/**/*.scss"
       ],
-      "checks": [
+      "tests": [
         {
-          "kind": "command",
           "run": "pnpm typecheck"
         }
       ],
