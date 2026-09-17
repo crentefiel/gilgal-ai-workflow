@@ -59,15 +59,15 @@ A Sentinel-style verifier **MAY** provide evidence to `check`, but a permanent S
 
 ## 4. Product contracts
 
-A project using contract-driven risk **SHOULD** maintain machine-readable contracts.
+A project using contract-driven risk **MUST** maintain machine-readable `contracts.json` data.
 
-Each contract **SHOULD** contain:
+Each contract **MUST** contain:
 
 - `id` — product-language behavior identifier;
-- `risk` — `S`, `M`, or `L`;
-- `paths` — code surfaces whose changes may affect the contract;
-- automated checks when available;
-- human checks when required.
+- `risk` — exactly `S`, `M`, or `L`;
+- `paths[]` — code surfaces whose changes may affect the contract;
+- `tests[]` — explicitly reviewed automated tests/commands for the contract, or an empty array when none applies;
+- `human[]` — required human checks, or an empty array when none applies.
 
 Example:
 
@@ -76,8 +76,8 @@ Example:
   "id": "WHATSAPP-QR-CONNECT",
   "risk": "L",
   "paths": ["src/whatsapp/**"],
-  "checks": [
-    { "kind": "command", "run": "pnpm test -- tests/whatsapp-status.test.ts" }
+  "tests": [
+    { "run": "pnpm test -- tests/whatsapp-status.test.ts" }
   ],
   "human": [
     "QR appears",
@@ -89,19 +89,19 @@ Example:
 
 Contract names **SHOULD** describe product behavior rather than implementation-library details.
 
+An implementation **MAY** also maintain `.gilgal/map.json` as a human navigation index such as `module → paths → contract ids`. `map.json` is not a Gate authority. If `map.json` contradicts `contracts.json`, **contracts.json wins**.
+
 ## 5. Risk resolution
 
-A candidate's effective risk **SHOULD** be computed from the contracts affected by the diff.
+A candidate's effective risk **MUST** be the maximum `risk` of the contracts whose `paths[]` intersect the Git diff against STABLE.
 
-The implementation **SHOULD NOT** allow the authoring agent to lower risk merely by declaring a smaller scope.
+The authoring agent **MUST NOT** declare or lower its own effective risk. Risk is derived from `contracts.json + diff`.
 
-The recommended ordering is:
+The ordering is:
 
 ```text
 S < M < L
 ```
-
-The candidate risk is the maximum risk of the matched contracts.
 
 Typical policy:
 
@@ -119,11 +119,19 @@ A candidate **SHOULD** store machine-readable state including at least:
 
 - `baseStableSha`;
 - current candidate SHA when available;
-- status;
-- hypothesis/intent;
-- strategy family when Failure Memory applies;
-- affected contracts;
-- effective risk.
+- status.
+
+A WORK candidate **MAY** also record author intent such as:
+
+```json
+{
+  "hypothesis": "...",
+  "strategyFamily": "...",
+  "contractsClaimed": ["ID-1"]
+}
+```
+
+`contractsClaimed` is a claim of intended scope, not authority. The actual affected contracts (`contractsHit`) and effective risk are computed by `check` from `contracts.json + diff`.
 
 Recommended statuses:
 
@@ -189,15 +197,31 @@ When a failed hypothesis matters to future work, the durable decision **SHOULD**
 
 Before promotion, the implementation **MUST** compare WORK against its recorded STABLE base or current valid STABLE according to the promotion policy.
 
-`check` **SHOULD**:
+`check` **MUST**:
 
-1. determine the candidate diff;
-2. match affected contracts from their mapped code surfaces;
-3. compute effective risk;
-4. consult Failure Memory when a strategy family is present;
-5. execute explicitly reviewed automated checks;
-6. record results for the exact candidate SHA;
-7. enter `pending-human` when required human checks remain.
+1. determine the Git diff against STABLE;
+2. calculate `contractsHit` by intersecting changed paths with each contract's `paths[]` in `contracts.json`;
+3. compute effective risk as the maximum risk of `contractsHit`;
+4. if `contractsClaimed` exists and `contractsHit` contains any id not present in `contractsClaimed`, return `BLOCKED` because the candidate left its claimed scope;
+5. consult Failure Memory when a strategy family is present;
+6. execute the `tests[]` required by `contractsHit`;
+7. record results for the exact candidate SHA, including `contractsClaimed` when present and the computed `contractsHit`;
+8. if any hit contract is risk `L` and a required `human[]` check is still pending, return `BLOCKED`/`pending-human`.
+
+A claim can be narrower than reality, but it cannot hide reality. `contractsHit` is authoritative for scope and risk.
+
+A practical implementation **SHOULD** provide behavior equivalent to:
+
+```text
+gilgal scope
+```
+
+`gilgal scope`:
+
+- reads the Git diff against STABLE, or explicitly selected staged paths, plus `contracts.json`;
+- prints `contractsHit`, maximum risk, required `tests[]`, and pending `human[]` checks;
+- **MUST NOT** call an LLM to decide scope or risk;
+- **MUST NOT** write or modify STABLE.
 
 Evidence **MUST NOT** be considered valid for another candidate SHA without explicit revalidation.
 
@@ -228,10 +252,14 @@ A conforming `promote` **MUST** refuse when any of the following applies:
 - candidate status is not `passed`;
 - required automated evidence is missing/failing;
 - required human evidence is missing;
+- a hit risk-L contract still has a pending `human[]` check;
+- `contractsClaimed` exists and `contractsHit` contains an id outside that claim;
 - evidence does not match the current candidate SHA;
 - candidate base/STABLE relationship is no longer valid under the project's promotion policy;
 - an exhausted strategy is being reused without required reopening/evidence when that rule is enabled;
 - any contract covered by the promotion is `INCOMPLETE` because of an unresolved `regress` record and no fresh required `check` and/or `ok` evidence has re-established that contract after the regression.
+
+`promote` **MUST NOT** override a scope mismatch or pending risk-L human requirement reported by `check`.
 
 Promotion **MUST NOT** hide a silent AI-performed rebase and then claim the previous evidence still applies.
 
@@ -241,6 +269,8 @@ A recommended safe rule is:
 recorded baseStableSha is still valid
 candidate evidence SHA == candidate SHA being promoted
 status == passed
+contractsHit is derived from contracts.json + diff
+contractsClaimed (when present) covers every contractsHit id
 all affected contract assurance states are complete
 ```
 
@@ -300,10 +330,12 @@ A minimal implementation MAY use:
 
 Recommended responsibilities:
 
-- `state.json`: STABLE/WORK identity, candidate status, hypothesis and strategy family, plus contract assurance state such as `INCOMPLETE` after a regression;
-- `contracts.json`: product contract, risk, paths, automated and human checks;
+- `state.json`: STABLE/WORK identity, candidate status, optional hypothesis/strategy family/`contractsClaimed`, plus contract assurance state such as `INCOMPLETE` after a regression;
+- `contracts.json`: authoritative contract `id`, `risk`, `paths[]`, `tests[]`, and `human[]`;
 - `memory.json`: typed strategy/hypothesis decisions, REJECTED/DEFERRED/EXHAUSTED reopening criteria, and regression records;
-- `evidence/<sha>.json`: checks performed for one exact candidate.
+- `evidence/<sha>.json`: computed `contractsHit`, effective risk, and checks performed for one exact candidate, plus `contractsClaimed` when present.
+
+An optional `.gilgal/map.json` MAY improve human navigation, but **MUST NOT** override `contracts.json` in the Gate.
 
 ## 14. Minimal command surface
 
@@ -311,6 +343,7 @@ A practical implementation SHOULD aim for a small interface:
 
 ```text
 gilgal start <hypothesis>
+gilgal scope
 gilgal check
 gilgal ok <contract> [check]
 gilgal promote
@@ -339,15 +372,16 @@ Implementations **MAY** add them when they solve a real project need without wea
 ## 16. Core invariants
 
 1. **STABLE is not the laboratory.**
-2. **Risk comes from affected product contracts, not author confidence or line count.**
-3. **Evidence belongs to an exact candidate.**
-4. **Risk L includes required human observation.**
-5. **An exhausted strategy is not new because it was renamed.**
-6. **A rejected hypothesis requires a new premise; it does not exhaust a strategy family by itself.**
-7. **A reported regression makes its contract INCOMPLETE until fresh evidence re-establishes it.**
-8. **`regress` never moves STABLE or performs rollback automatically.**
-9. **Promotion is explicit and refuses when evidence is incomplete or stale.**
-10. **The agent that writes the change does not gain unilateral authority to declare it production-ready.**
+2. **Scope and risk come from `contracts.json + diff`, not agent declaration.**
+3. **A claimed scope cannot hide a contract actually hit by the diff.**
+4. **Evidence belongs to an exact candidate.**
+5. **Risk L includes required human observation.**
+6. **An exhausted strategy is not new because it was renamed.**
+7. **A rejected hypothesis requires a new premise; it does not exhaust a strategy family by itself.**
+8. **A reported regression makes its contract INCOMPLETE until fresh evidence re-establishes it.**
+9. **`regress` never moves STABLE or performs rollback automatically.**
+10. **Promotion is explicit and refuses when evidence is incomplete, stale, or outside claimed scope.**
+11. **The agent that writes the change does not gain unilateral authority to declare it production-ready.**
 
 For an agent with very little context, two rules preserve the spirit of GILGAL:
 
