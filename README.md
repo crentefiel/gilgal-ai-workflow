@@ -185,6 +185,8 @@ gilgal reject
 gilgal status
 ```
 
+`gilgal status` deve mostrar pelo menos `cwd` e `HEAD`. Se `.gilgal/worktrees.json` existir, também deve mostrar o papel desse worktree (`store/stable`, `work/candidate` ou outro candidato). Sem esse mapa, o status não inventa um papel nem uma pasta de store que não verificou.
+
 Fluxo:
 
 ```text
