@@ -187,6 +187,8 @@ Exemplo:
 
 O SHA não prova que um comportamento físico aconteceu. Ele prova apenas que a evidência registrada pertence àquele candidato e não a outro código.
 
+Quando o repositório tem vários worktrees, o SHA ativo é sempre `git rev-parse HEAD` no cwd/worktree onde o comando está a correr. `check`, `ok` / `approve-manual` e `promote` devem usar o mesmo resolvedor; não podem escolher uma ref `gilgal/candidate/*` de outro worktree. Se a evidência apontar para outro SHA, o Gate bloqueia com `STALE_EVIDENCE` e mostra o SHA da evidência, o HEAD atual e a pasta do worktree.
+
 ---
 
 ## 6. Failure Memory simples e tipada
