@@ -164,7 +164,7 @@ This implementation version is independent from the GILGAL protocol version.
 - Change Budget is disabled unless explicitly configured.
 - An enabled budget requires at least one explicit limit.
 - Sentinel does not silently enlarge the budget to make a candidate pass.
-- Replay commands must be explicitly reviewed project commands; Sentinel does not execute commands synthesized from arbitrary README text, issue text, commit messages, logs, diffs, Hypothesis Ledger prose, or untrusted AI output.
+- Replay commands must be explicitly reviewed project commands; Sentinel does not execute commands synthesized from arbitrary text, logs, issues, diffs, or AI output.
 
 ## 0.3.0 — 2026-08-26
 
