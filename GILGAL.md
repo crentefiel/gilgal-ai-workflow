@@ -486,7 +486,7 @@ Regra prática recomendada:
 
 > Um contrato L deve tentar caber em poucos checks humanos objetivos e rápidos.
 
-Exemplo:
+Exemplo LAN House:
 
 ```text
 ✓ QR aparece
@@ -557,7 +557,7 @@ Este repositório contém uma implementação de referência do GILGAL Sentinel 
 
 Ela permanece útil como motor de verificação e evidência, mas o **núcleo conceitual atual não exige que Sentinel seja um serviço separado**. Uma implementação futura pode reutilizar esse motor internamente em `gilgal check`.
 
-A CLI Sentinel existente não implementa atualmente o fluxo operacional `reject`/`promote`; esta documentação não lhe concede autoridade de promoção.
+A CLI Sentinel existente não implementa atualmente o fluxo operacional `reject`/`promote`; por isso esta emenda não adiciona `regress` ao Sentinel 0.2.0 nem lhe concede autoridade de promoção.
 
 Documentos históricos de versões 0.x permanecem no repositório como registro da evolução do conceito. A fonte normativa atual é [`SPECIFICATION.md`](SPECIFICATION.md), e esta página é a explicação operacional do protocolo.
 
