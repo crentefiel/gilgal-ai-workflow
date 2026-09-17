@@ -221,7 +221,7 @@ Before promotion, the implementation **MUST** compare WORK against its recorded 
 
 Evidence **MUST NOT** be considered valid for another candidate SHA without explicit revalidation.
 
-If the working tree is dirty, or if required typecheck/tests/replays/build steps did not actually run, the checker **MUST NOT** write evidence that `ok`, `approve-manual`, or `promote` can treat as a valid `CHECK`. It **MAY** write an `ABORT-*.txt` file or diagnostic log instead, and approval commands **MUST** ignore abort records.
+If the working tree is dirty, or if required typecheck/tests/replays/build steps did not actually run, a Sentinel-style checker **MUST NOT** write a `CHECK-*.json` (or equivalent evidence) that `ok`, `approve-manual`, or `promote` can treat as a valid `CHECK`. It **MAY** write an `ABORT-*.txt` file or diagnostic log instead, and approval commands **MUST** ignore abort records.
 
 A record with an implausibly short `wallClockMs` together with empty `artifacts: []` **MUST NOT** be accepted as successful check evidence. The implementation **MUST** classify it as `DECORATIVE_CONTRACT_PASS` or `ABORTED_CHECK`.
 
@@ -343,7 +343,7 @@ When a store worktree is checked out at `gilgal/stable`, moving that ref is what
 
 Recommended responsibilities:
 
-- `state.json`: STABLE/WORK identity, candidate status, hypothesis and strategy family, plus contract assurance state such as `INCOMPLETE` after a regression;
+- `state.json`: optional cached STABLE/WORK metadata, candidate status, hypothesis and strategy family, plus contract assurance state such as `INCOMPLETE` after a regression; it **MUST NOT** override the current worktree `HEAD` as active candidate identity;
 - `contracts.json`: product contract, risk, paths, automated and human checks;
 - `memory.json`: typed strategy/hypothesis decisions, REJECTED/DEFERRED/EXHAUSTED reopening criteria, and regression records;
 - `evidence/<sha>.json`: checks performed for one exact candidate.
