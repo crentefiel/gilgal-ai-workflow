@@ -2,6 +2,11 @@
 
 All notable changes to the GILGAL concept/specification will be documented here.
 
+## Scope claimed/hit — 2026-09-17
+
+- Scope and risk are now derived from `contracts.json + git diff`; an agent may state `contractsClaimed`, but `check` computes authoritative `contractsHit` and blocks any hit outside the claim.
+- Added `gilgal scope` to print hit contracts, maximum risk, required `tests[]`, and pending `human[]` without calling an LLM or writing STABLE; risk-L pending human checks remain blocked.
+
 ## Reject kind + regress — 2026-09-15
 
 - `reject` now distinguishes `kind: strategy | hypothesis`: strategy may become `EXHAUSTED`; hypothesis must not, and reopening it requires a new recorded premise.
@@ -159,7 +164,7 @@ This implementation version is independent from the GILGAL protocol version.
 - Change Budget is disabled unless explicitly configured.
 - An enabled budget requires at least one explicit limit.
 - Sentinel does not silently enlarge the budget to make a candidate pass.
-- Replay commands must be explicitly reviewed project commands; Sentinel does not execute commands synthesized from arbitrary text, logs, issues, diffs, or AI output.
+- Replay commands must be explicitly reviewed project commands; Sentinel does not execute commands synthesized from arbitrary README text, issue text, commit messages, logs, diffs, Hypothesis Ledger prose, or untrusted AI output.
 
 ## 0.3.0 — 2026-08-26
 
