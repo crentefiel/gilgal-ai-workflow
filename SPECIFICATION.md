@@ -221,6 +221,8 @@ Before promotion, the implementation **MUST** compare WORK against its recorded 
 
 Evidence **MUST NOT** be considered valid for another candidate SHA without explicit revalidation.
 
+Evidence lookup **MUST** start from the active `HEAD` of the current worktree. A `CHECK` bound to another SHA **MUST** be ignored for approval/promotion, and an `ABORT` record **MUST** be ignored as approval evidence. Selecting “the newest CHECK/JSON file in the evidence directory” **MUST NOT** be used as candidate evidence lookup.
+
 If the working tree is dirty, or if required typecheck/tests/replays/build steps did not actually run, a Sentinel-style checker **MUST NOT** write a `CHECK-*.json` (or equivalent evidence) that `ok`, `approve-manual`, or `promote` can treat as a valid `CHECK`. It **MAY** write an `ABORT-*.txt` file or diagnostic log instead, and approval commands **MUST** ignore abort records.
 
 A record with an implausibly short `wallClockMs` together with empty `artifacts: []` **MUST NOT** be accepted as successful check evidence. The implementation **MUST** classify it as `DECORATIVE_CONTRACT_PASS` or `ABORTED_CHECK`.
@@ -241,6 +243,8 @@ A human check record **SHOULD** identify:
 
 An AI agent **MUST NOT** manufacture human approval.
 
+A human approval token/record **MUST** contain the active candidate SHA. A representation such as `HUMAN-<sha>` **MAY** be used, but no particular filename or serialization is required. If the human approval SHA differs from the current worktree `HEAD`, the command **MUST** block with `STALE_HUMAN_EVIDENCE`.
+
 If the candidate SHA changes after a human check, the implementation **MUST** determine whether that check remains valid or requires re-execution.
 
 ## 11. Promote as Gate
@@ -258,6 +262,8 @@ A conforming `promote` **MUST** refuse when any of the following applies:
 - any contract covered by the promotion is `INCOMPLETE` because of an unresolved `regress` record and no fresh required `check` and/or `ok` evidence has re-established that contract after the regression.
 
 Promotion **MUST NOT** hide a silent AI-performed rebase and then claim the previous evidence still applies.
+
+`promote` **MUST** use compare-and-swap semantics for both STABLE and the active candidate. It **MUST** capture the expected STABLE SHA and expected current-worktree `HEAD` before final promotion checks, then re-read both immediately before moving the STABLE ref. If either value changed, promotion **MUST** block with `PROMOTION_DRIFT`, print expected/current STABLE and expected/current HEAD, and **MUST NOT** move STABLE.
 
 A recommended safe rule is:
 
@@ -341,6 +347,16 @@ If `worktrees.json` exists, `promote` **MUST** print `store.path` and state that
 
 When a store worktree is checked out at `gilgal/stable`, moving that ref is what causes that mapped store path to contain the promoted STABLE. This relationship **MUST** be reported explicitly rather than hidden behind a fixed-path success message.
 
+Authority precedence is intentionally small:
+
+```text
+active candidate SHA = git rev-parse HEAD in the current cwd/worktree
+stable SHA           = git rev-parse gilgal/stable
+worktree role/path   = worktrees.json, if present; descriptive, never a SHA resolver
+evidence             = records bound to the active HEAD; other SHAs and ABORT are ignored
+state.json           = metadata/cache only; it never overrides Git
+```
+
 Recommended responsibilities:
 
 - `state.json`: optional cached STABLE/WORK metadata, candidate status, hypothesis and strategy family, plus contract assurance state such as `INCOMPLETE` after a regression; it **MUST NOT** override the current worktree `HEAD` as active candidate identity;
@@ -396,6 +412,10 @@ Implementations **MAY** add them when they solve a real project need without wea
 13. **An aborted or non-executed check is not approval evidence; abort records are ignored by approval and promotion.**
 14. **Gate-code changes are risk L, use their own candidate, and do not share a product human approval.**
 15. **Before moving STABLE, `promote` identifies the mapped store path when available; without a map it reports only the ref and cwd it verified.**
+16. **Evidence lookup starts from the active worktree `HEAD`; other-SHA CHECK records and ABORT records are ignored, and “newest JSON wins” is forbidden.**
+17. **Human approval is SHA-bound to the active `HEAD`; a mismatch blocks with `STALE_HUMAN_EVIDENCE`.**
+18. **`promote` re-reads both STABLE and current-worktree `HEAD` before moving the ref; any change blocks with `PROMOTION_DRIFT`.**
+19. **Git resolves candidate and STABLE identity; `worktrees.json` describes roles/paths and `state.json` is cache/metadata only.**
 
 For an agent with very little context, two rules preserve the spirit of GILGAL:
 
