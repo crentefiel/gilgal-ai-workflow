@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0",
+  "protocolVersion": "0.5.0",
+  "upstreamSentinelBaseline": "0.2.0",
+  "candidateSentinelVersion": "0.3.0-RC1",
+  "localBaseSha": "75c729d33c181114dd8104006674547c9dabee8e",
+  "localCandidateSha": "a0a6ddee5b19bd1bec8c43b6831733d579f107ba",
+  "localPostPromotionStableRecordSha": "ad5d0087b0902a682c090b43ba5efa57dc8726f4",
+  "promotionTag": "gilgal/promoted/2026-09-02-130259",
+  "patchSha256": "d0bc920017f9ab37e0f6c360607097a9773fec0a95278134f33c9fd18f1f1e6c",
+  "currentTrustedVerifierDigest": "182bbfb7990d4786a60679ffb50cbbc5371a11ae32acaeef037f81898cf1b1b7",
+  "proposedVerifierDigest": "55108abc2b61d77ce4987610ac70801fad375d024f8488da1c12d0e139cc3d1d",
+  "currentTrustedGateDigest": "89b1ec5c858306080ef98141129666e7da98897feab63a400ee959247d955131",
+  "proposedGateDigest": "bcaf80b022cf4c3ff818c2770b3c08e2ba98c19e1ec5d4427e947ca7a593a233",
+  "policyDigest": "b93692cfb12558d48a0c741b8bf5e8c09945da082c7515c2d0dcaab0cd09e62b"
+}
