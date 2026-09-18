@@ -185,7 +185,7 @@ gilgal reject
 gilgal status
 ```
 
-`gilgal status` deve mostrar pelo menos `cwd` e `HEAD`. Se `.gilgal/worktrees.json` existir, também deve mostrar o papel desse worktree (`store/stable`, `work/candidate` ou outro candidato). Sem esse mapa, o status não inventa um papel nem uma pasta de store que não verificou.
+`gilgal status` deve mostrar pelo menos `cwd` e `HEAD`. Se `.gilgal/worktrees.json` existir, também deve mostrar o papel desse worktree (`store/stable`, `work/candidate` ou outro candidato). Sem esse mapa, o status não inventa um papel nem uma pasta de store que não verificou. Evidência e aprovação humana são resolvidas pelo HEAD atual, nunca pelo ficheiro CHECK mais recente; CHECK de outro SHA e ABORT são ignorados. Antes de promover, STABLE e HEAD são lidos outra vez e qualquer drift bloqueia com `PROMOTION_DRIFT`.
 
 Fluxo:
 
