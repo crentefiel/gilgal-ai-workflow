@@ -19,7 +19,9 @@
       "check": "QR appears",
       "result": "pass",
       "actor": "operator",
-      "timestamp": "2026-09-09T12:00:00Z"
+      "timestamp": "2026-09-09T12:00:00Z",
+      "token": "HUMAN-e4f5g6h",
+      "candidateSha": "e4f5g6h"
     },
     {
       "contract": "WHATSAPP-QR-CONNECT",

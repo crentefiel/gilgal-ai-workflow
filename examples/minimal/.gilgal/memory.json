@@ -36,6 +36,24 @@
       "reopenWhen": [
         "a materially new premise explains the observed behavior"
       ]
+    },
+    {
+      "kind": "strategy",
+      "family": "gate-reads-sibling-worktree-ref",
+      "status": "EXHAUSTED",
+      "symptom": "STALE_EVIDENCE (other-worktree-sha vs HEAD)",
+      "reason": "Gate commands resolved a repository-global candidate ref instead of the HEAD of the current worktree.",
+      "evidence": [
+        "worktree-identity-2026-09-17"
+      ],
+      "reopenWhen": [
+        "approve/promote use HEAD of the current cwd",
+        "evidence lookup starts from the current HEAD and ignores other-SHA CHECK and ABORT records",
+        "human approval is bound to the current HEAD",
+        "promote re-checks STABLE and HEAD before moving the stable ref",
+        "worktrees.json identifies the store when present",
+        "aborted checks do not produce approval-valid CHECK evidence"
+      ]
     }
   ],
   "regressions": [

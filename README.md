@@ -185,6 +185,8 @@ gilgal reject
 gilgal status
 ```
 
+`gilgal status` deve mostrar pelo menos `cwd` e `HEAD`. Se `.gilgal/worktrees.json` existir, também deve mostrar o papel desse worktree (`store/stable`, `work/candidate` ou outro candidato). Sem esse mapa, o status não inventa um papel nem uma pasta de store que não verificou. Evidência e aprovação humana são resolvidas pelo HEAD atual, nunca pelo ficheiro CHECK mais recente; CHECK de outro SHA e ABORT são ignorados. Antes de promover, STABLE e HEAD são lidos outra vez e qualquer drift bloqueia com `PROMOTION_DRIFT`.
+
 Fluxo:
 
 ```text
@@ -263,6 +265,8 @@ Esses recursos continuam possíveis quando resolvem um problema real.
 O diretório [`sentinel/`](sentinel/) contém a implementação de referência histórica do GILGAL Sentinel.
 
 Ela continua útil como motor local de checks e evidência. O núcleo atual apenas deixa claro que Sentinel é uma função de verificação, não uma autoridade de promoção e não um requisito para existir como processo separado.
+
+**Spec 0.5.1; a implementação de referência pode continuar 0.2.0 até haver PR à parte.** Esta PR documenta invariantes do protocolo e não afirma que o Sentinel 0.2.0 já os implementa.
 
 Documentos históricos de versões 0.x permanecem no repositório para preservar a evolução do conceito.
 

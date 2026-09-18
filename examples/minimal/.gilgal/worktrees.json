@@ -1,0 +1,16 @@
+{
+  "store": {
+    "path": "../store",
+    "ref": "gilgal/stable"
+  },
+  "work": {
+    "path": "../work",
+    "ref": "gilgal/candidate/example"
+  },
+  "others": [
+    {
+      "path": "../work-other",
+      "ref": "candidate/other-v1"
+    }
+  ]
+}
