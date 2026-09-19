@@ -1,0 +1,127 @@
+name: GILGAL Task Contract
+description: Publish a capability-aware task for humans and coding agents
+title: "[GILGAL TASK] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this contract to define the problem before an agent changes code. Do not include secrets, credentials, private customer data or unredacted logs.
+
+  - type: input
+    id: stable_ref
+    attributes:
+      label: STABLE reference
+      description: Exact 40-character commit SHA of the last protected baseline.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the observed failure without assuming its cause.
+      placeholder: What happens, where it happens and how it differs from the expected behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected observable behavior
+      description: State what a human or automated check must observe when the task is solved.
+    validations:
+      required: true
+
+  - type: textarea
+    id: target_capabilities
+    attributes:
+      label: Target capabilities
+      description: List the capabilities intended to improve and their current STABLE status.
+      placeholder: |
+        - PRINT_DUPLEX: KNOWN_BAD
+    validations:
+      required: true
+
+  - type: textarea
+    id: preserved_capabilities
+    attributes:
+      label: Mandatory preserved capabilities
+      description: List every KNOWN_GOOD capability that candidates must preserve.
+      placeholder: |
+        - WHATSAPP_QR: KNOWN_GOOD
+        - FILE_RECEPTION: KNOWN_GOOD
+    validations:
+      required: true
+
+  - type: textarea
+    id: allowed_scope
+    attributes:
+      label: Allowed scope
+      description: Files, directories or components that an attempt may modify.
+    validations:
+      required: true
+
+  - type: textarea
+    id: forbidden_scope
+    attributes:
+      label: Forbidden scope and side effects
+      description: State protected components and prohibited actions, including physical or external effects.
+      placeholder: No STABLE writes; no automatic merge; no physical printing without human authorization.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: physical_effects
+    attributes:
+      label: Does the task involve physical or real-world effects?
+      options:
+        - "No"
+        - "Yes — explicit human authorization and evidence required"
+    validations:
+      required: true
+
+  - type: textarea
+    id: automated_evidence
+    attributes:
+      label: Required automated evidence
+      description: Tests, builds, policy checks or reproducible diagnostics required from each candidate.
+    validations:
+      required: true
+
+  - type: textarea
+    id: human_evidence
+    attributes:
+      label: Required human evidence
+      description: Describe any observation that automation cannot prove. Enter "None" when not applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment fingerprint
+      description: Relevant OS, architecture, runtime, drivers, devices and configuration identifiers. Do not include secrets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance and rejection criteria
+      description: Define the evidence-based conditions for PASS, FAIL, quarantine or NO_WINNER.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safeguards
+    attributes:
+      label: Operator safeguards
+      options:
+        - label: I have not included credentials, private customer data or secrets.
+          required: true
+        - label: STABLE is the protected baseline and will not be used as the laboratory.
+          required: true
+        - label: PROMOTABLE will not be treated as automatically merged or promoted.
+          required: true
