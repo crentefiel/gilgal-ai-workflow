@@ -1,0 +1,13 @@
+{
+  "name": "@gilgal/circlechat-connector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GILGAL orchestration bridge between CircleChat and FreeLLMAPI",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/orchestrator.js"
+  }
+}

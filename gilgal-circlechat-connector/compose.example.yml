@@ -1,0 +1,14 @@
+services:
+  gilgal-connector:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "7332:7332"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
