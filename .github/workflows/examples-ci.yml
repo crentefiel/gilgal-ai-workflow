@@ -1,0 +1,27 @@
+name: GILGAL Examples
+
+on:
+  push:
+    branches:
+      - main
+      - 'gilgal/candidate/**'
+    paths:
+      - 'examples/guardrail-scenarios/**'
+      - '.github/workflows/examples-ci.yml'
+  pull_request:
+    paths:
+      - 'examples/guardrail-scenarios/**'
+      - '.github/workflows/examples-ci.yml'
+
+jobs:
+  guardrail-scenarios:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run executable scenarios
+        run: node examples/guardrail-scenarios/run.mjs
