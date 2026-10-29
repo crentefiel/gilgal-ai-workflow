@@ -1,0 +1,29 @@
+{
+  "description": "Synthetic fixture: evidence proves PDF export (7 pages) but not physical printing or WhatsApp preservation.",
+  "candidateSha": "a1b2c3d4e5f6",
+  "contracts": [
+    {
+      "id": "PDF-EXPORT",
+      "risk": "M",
+      "human": ["PDF contains expected pages"]
+    },
+    {
+      "id": "PHYSICAL-PRINT",
+      "risk": "L",
+      "human": ["Document prints front-and-back"]
+    },
+    {
+      "id": "WHATSAPP-PRESERVED",
+      "risk": "L",
+      "human": ["Session survives restart"]
+    }
+  ],
+  "evidence": {
+    "pdfExport": {
+      "status": "PASS",
+      "details": "Exported PDF has 7 pages"
+    },
+    "physicalPrint": null,
+    "whatsapp": null
+  }
+}
