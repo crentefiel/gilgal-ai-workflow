@@ -31,9 +31,10 @@ export interface Finding {
   category: string;
   severity: 'low' | 'medium' | 'high';
   summary: string;
-  source?: string;
+  /** Required for non-hypothesis findings. */
+  source: string;
   confirmationHint?: string;
-  isHypothesis?: boolean;
+  isHypothesis: boolean;
 }
 
 export interface IndependentReviewRecord {
@@ -41,7 +42,9 @@ export interface IndependentReviewRecord {
   state: ReviewState;
   snapshot: ReviewSnapshot;
   reviewerModel?: string;
+  /** Only set when the host can prove a fresh isolated session was used. */
   isolationMechanism?: string;
+  isolationProven: boolean;
   findings: Finding[];
   limitations: string[];
   durationMs?: number;
@@ -78,6 +81,18 @@ export async function buildSnapshot(options: {
   };
 }
 
+/** Re-hash current files and confirm they still match the snapshot. Throws on mismatch. */
+export async function verifySnapshotMaterials(snapshot: ReviewSnapshot): Promise<void> {
+  for (const material of snapshot.materials) {
+    const current = await hashFile(material.path);
+    if (current !== material.sha256) {
+      throw new Error(
+        `Material changed after snapshot: ${material.path} (expected ${material.sha256}, got ${current})`,
+      );
+    }
+  }
+}
+
 export function validateFindings(raw: unknown): Finding[] {
   if (!Array.isArray(raw)) throw new Error('Findings must be an array');
   return raw.map((item, index) => {
@@ -91,15 +106,22 @@ export function validateFindings(raw: unknown): Finding[] {
       throw new Error(`Finding ${index} invalid severity`);
     }
     if (typeof f.summary !== 'string') throw new Error(`Finding ${index} missing summary`);
+
+    const isHypothesis = f.isHypothesis === true;
+    const source = typeof f.source === 'string' ? f.source : '';
+    if (!isHypothesis && !source) {
+      throw new Error(`Finding ${index} requires a source unless marked isHypothesis`);
+    }
+
     return {
       id: f.id,
       contractId: typeof f.contractId === 'string' ? f.contractId : undefined,
       category: f.category,
       severity: f.severity as Finding['severity'],
       summary: f.summary,
-      source: typeof f.source === 'string' ? f.source : undefined,
+      source: source || '(hypothesis)',
       confirmationHint: typeof f.confirmationHint === 'string' ? f.confirmationHint : undefined,
-      isHypothesis: f.isHypothesis === true,
+      isHypothesis,
     };
   });
 }
@@ -121,18 +143,21 @@ export function createCompletedRecord(
   options: {
     reviewerModel?: string;
     isolationMechanism?: string;
+    isolationProven?: boolean;
     limitations?: string[];
     durationMs?: number;
     tokensUsed?: number;
     notes?: string;
   } = {},
 ): IndependentReviewRecord {
+  const isolationProven = options.isolationProven === true && !!options.isolationMechanism;
   return {
     schemaVersion: 1,
     state: 'completed',
     snapshot,
     reviewerModel: options.reviewerModel,
-    isolationMechanism: options.isolationMechanism ?? 'external-fresh-session',
+    isolationMechanism: isolationProven ? options.isolationMechanism : undefined,
+    isolationProven,
     findings,
     limitations: options.limitations ?? [],
     durationMs: options.durationMs,
