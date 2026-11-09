@@ -276,6 +276,12 @@ A explicação operacional está em [`GILGAL.md`](GILGAL.md).
 
 ---
 
+## Revisão independente experimental
+
+A proposta inspirada no [Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model) combina planejamento com contexto e revisão em sessão nova. Os helpers opcionais e uma demonstração estão em [`sentinel/examples/independent-review/`](sentinel/examples/independent-review/). Não executam uma IA nem alteram o Gate.
+
+O [relatório de revisão](docs/REVISAO_2026_11_09.md) distingue protocolo, código existente e propostas ainda abertas.
+
 ## Regra central
 
 > **Ninguém declara que o produto funciona. Só o contrato declara — e no risco L o contrato inclui uma pessoa.**

@@ -1,36 +1,32 @@
-# Independent Review Prototype (Experimental)
+# Revisão independente experimental
 
-Optional prototype for issue #26. Does **not** affect the Gate, SPEC, or main Sentinel check/promote flow.
+Helpers opcionais para #26 e PR #32, inspirados no [EGM](https://github.com/google/elephant-goldfish-model). Não alteram Gate, SPEC, `check`, aprovação humana ou promoção. Não são um adaptador de IA nem uma integração pronta com DeepSeek Harness.
 
-## Purpose
+## Executar a demonstração
 
-Prepare a snapshot of materials (with SHA-256 hashes), verify the files still match those hashes before use, send them to a fresh external session, validate the structured findings, and save a separate review record.
+No diretório `sentinel`, execute `npm ci` e `npm run review:demo`.
 
-Findings are pendencies only. They never assign VERIFIED, authenticate human `ok`, or authorize promotion.
+O exemplo lê a fixture sintética, captura bytes e hashes, valida dois achados escritos pelo script e apresenta um registro `unavailable`: não houve sessão independente. Isso demonstra transporte e validação, não descoberta de falhas por um modelo. Não imprime, acessa provedores ou escreve evidência de produto.
 
-## Key guarantees added in this revision
+## Contrato do host
 
-- Non-hypothesis findings **must** include a `source`.
-- Isolation is **not** assumed: `isolationProven` is false unless the host explicitly proves a fresh session was used.
-- Call `verifySnapshotMaterials` before sending materials to confirm the files have not changed since the snapshot was taken.
+1. Selecionar os arquivos autorizados, sem segredos/dados de clientes; resolver HEAD/STABLE pelo Git no worktree correto. Os helpers validam formato, mas não consultam Git.
+2. Chamar `captureReviewInput` com SHAs completos, contratos e caminhos. Incluir os próprios contratos, diff, baseline e evidências entre os materiais fornecidos.
+3. Chamar `prepareReviewMaterials` e enviar exclusivamente os buffers retornados a uma sessão nova. Não reabrir os caminhos para envio. Esses buffers são cópias verificadas; o host não deve modificá-los após a conferência.
+4. Documentar modelo, ID de execução e mecanismo de sessão pelo host. `freshSessionDeclared` é uma declaração dessa fronteira de confiança, não prova criptográfica nem afirmação do modelo.
+5. Chamar `createCompletedRecord(snapshot, rawFindings, options)`, que valida os dados novamente. Só usar metadados de execução observados pelo host. Sem declaração de sessão nova, retorna `unavailable`, nunca aprovação.
+6. Ao terminar, resolver HEAD/STABLE novamente e chamar `isSnapshotCurrent`; se false, usar `markStale`. A detecção é explícita, não um monitor contínuo.
+7. Gravar com `saveReviewRecord` somente no diretório de revisões, separado dos stores de evidência e aprovação. Cada nome usa UUID e criação exclusiva. O diretório é fornecido pelo host confiável, não pelo modelo.
 
-## Suggested states
+`source` é um caminho exato de um material do snapshot. `contractId` deve existir na lista selecionada. Fonte existente prova rastreabilidade, não a verdade semântica do texto. O host pode acrescentar localização/trecho nos resultados de sua interface.
 
-- `completed` — review executed and output validated
-- `incomplete` — partial or invalid output
-- `unavailable` — host cannot provide a fresh session
-- `stale` — materials or candidate changed after snapshot
+Estados: `completed` = saída válida e sessão nova declarada pelo host; `unavailable` = sem essa sessão; `stale` = snapshot invalidado; `incomplete` reservado ao adaptador para timeout/resposta inválida. Erros de validação lançam exceção: o futuro adaptador deve tratá-los como falha, nunca sucesso.
 
-## Fixture example
+## Limites e próximos passos
 
-See `fixture-evidence-package.json` for a synthetic case where evidence proves PDF export but not physical printing or WhatsApp preservation.
-
-## Usage sketch (host-side)
-
-1. Build snapshot with `buildSnapshot`.
-2. Immediately before use, call `verifySnapshotMaterials`.
-3. Send snapshot + prompt to a **new** session (do not reuse the implementer conversation). Record whether isolation was actually proven.
-4. Validate returned findings with `validateFindings` (source required unless hypothesis).
-5. Save with `saveReviewRecord` / `createCompletedRecord`.
-
-If the host cannot create a fresh session, record state `unavailable` instead of simulating isolation.
+- Nenhuma execução real de IA, isolamento de processo, medição de tokens ou verificação de credenciais é implementada.
+- O host controla permissões e transmissão. Estes helpers não são sandbox e não devem receber caminhos arbitrários do modelo.
+- Contratos/IDs fornecidos pelo host não são inferidos do código por estes helpers.
+- Sem resposta válida, não produzir `completed`. Zero achados não aprova candidato nem encerra pendências anteriores.
+- O adaptador futuro deve registrar falhas e acessos observados, limitar rodadas/custo e preservar os checks humanos previstos no contrato.
+- Planejamento rejeitado por custo/preferência deve permanecer decisão de planejamento, sem marcar estratégia `EXHAUSTED`.

@@ -19,7 +19,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build --silent && node scripts/run-tests.mjs",
-    "sentinel": "npm run build --silent && node dist/src/cli.js sentinel --config ../gilgal.sentinel.json"
+    "sentinel": "npm run build --silent && node dist/src/cli.js sentinel --config ../gilgal.sentinel.json",
+    "review:demo": "npm run build --silent && node examples/independent-review/demo.mjs"
   },
   "engines": {
     "node": ">=20"
