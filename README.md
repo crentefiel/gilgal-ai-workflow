@@ -11,6 +11,40 @@ GILGAL é um protocolo de confiança para mudanças de software feitas com ajuda
 **Criador do conceito:** David Ferreira ([@crentefiel](https://github.com/crentefiel))  
 **Primeira formalização pública:** 2026-08-25
 
+> **AI writes the change. GILGAL demands the proof.**  
+> **A IA escreve a mudança. O GILGAL exige a prova.**
+
+## Em uma frase
+
+**GILGAL é um guardrail para mudanças de software geradas por IA, com contratos, memória de regressão e evidência explícita antes da promoção.**
+
+Ele não tenta substituir agentes de IA nem decidir como eles devem programar. Ele governa o momento em que uma mudança pode ser chamada de confiável:
+
+```text
+A IA cria a mudança.
+O GILGAL verifica as capacidades.
+O Sentinel coleta as provas.
+O Gate bloqueia regressões.
+O humano autoriza a promoção quando o risco exige.
+```
+
+## Para quem é
+
+- equipes que usam agentes de IA para desenvolver e revisar software;
+- projetos críticos nos quais um teste verde não basta;
+- organizações que precisam de auditoria, rastreabilidade e evidência por versão;
+- sistemas em que melhorar uma capacidade não pode quebrar outra silenciosamente.
+
+## Três resultados fáceis de entender
+
+| Cenário | Decisão |
+|---|---|
+| O candidato melhora a capacidade-alvo, preserva tudo e possui evidência válida | `PROMOTABLE` |
+| O candidato melhora algo, mas quebra uma capacidade conhecida | `REGRESSION_QUARANTINE` |
+| Nenhum candidato reúne todas as capacidades obrigatórias | `NO_WINNER → RECONCILIATION` |
+
+Os três cenários podem ser executados localmente em [`examples/guardrail-scenarios/`](examples/guardrail-scenarios/).
+
 ---
 
 ## O problema

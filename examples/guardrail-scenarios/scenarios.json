@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "simple-change",
+      "expected": "PROMOTABLE",
+      "candidates": [
+        {
+          "sha": "1111111111111111111111111111111111111111",
+          "capabilities": [
+            {
+              "id": "LANDING_PAGE_COPY",
+              "mandatory": true,
+              "target": true,
+              "stableStatus": "FAIL",
+              "candidateStatus": "PASS",
+              "evidence": [
+                {
+                  "status": "VERIFIED",
+                  "sha": "1111111111111111111111111111111111111111"
+                }
+              ]
+            },
+            {
+              "id": "CHECKOUT",
+              "mandatory": true,
+              "target": false,
+              "stableStatus": "KNOWN_GOOD",
+              "candidateStatus": "PASS",
+              "evidence": [
+                {
+                  "status": "VERIFIED",
+                  "sha": "1111111111111111111111111111111111111111"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "regression",
+      "expected": "REGRESSION_QUARANTINE",
+      "candidates": [
+        {
+          "sha": "2222222222222222222222222222222222222222",
+          "capabilities": [
+            {
+              "id": "API_LATENCY",
+              "mandatory": true,
+              "target": true,
+              "stableStatus": "FAIL",
+              "candidateStatus": "PASS",
+              "evidence": [
+                {
+                  "status": "VERIFIED",
+                  "sha": "2222222222222222222222222222222222222222"
+                }
+              ]
+            },
+            {
+              "id": "SESSION_RESTART",
+              "mandatory": true,
+              "target": false,
+              "stableStatus": "KNOWN_GOOD",
+              "candidateStatus": "FAIL",
+              "evidence": [
+                {
+                  "status": "VERIFIED",
+                  "sha": "2222222222222222222222222222222222222222"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reconciliation",
+      "expected": "NO_WINNER",
+      "candidates": [
+        {
+          "sha": "3333333333333333333333333333333333333333",
+          "capabilities": [
+            {
+              "id": "WHATSAPP_RECEIVE",
+              "mandatory": true,
+              "target": false,
+              "stableStatus": "KNOWN_GOOD",
+              "candidateStatus": "FAIL",
+              "evidence": [
+                {
+                  "status": "VERIFIED",
+                  "sha": "3333333333333333333333333333333333333333"
+                }
+              ]
+            },
+            {
+              "id": "DUPLEX",
+              "mandatory": true,
+              "target": true,
+              "stableStatus": "FAIL",
+              "candidateStatus": "PASS",
+              "evidence": [
+                {
+                  "status": "VERIFIED",
+                  "sha": "3333333333333333333333333333333333333333"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "sha": "4444444444444444444444444444444444444444",
+          "capabilities": [
+            {
+              "id": "WHATSAPP_RECEIVE",
+              "mandatory": true,
+              "target": false,
+              "stableStatus": "KNOWN_GOOD",
+              "candidateStatus": "PASS",
+              "evidence": [
+                {
+                  "status": "VERIFIED",
+                  "sha": "4444444444444444444444444444444444444444"
+                }
+              ]
+            },
+            {
+              "id": "DUPLEX",
+              "mandatory": true,
+              "target": true,
+              "stableStatus": "FAIL",
+              "candidateStatus": "FAIL",
+              "evidence": [
+                {
+                  "status": "VERIFIED",
+                  "sha": "4444444444444444444444444444444444444444"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
