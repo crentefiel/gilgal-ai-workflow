@@ -276,6 +276,10 @@ A explicação operacional está em [`GILGAL.md`](GILGAL.md).
 
 ---
 
+## WORK Coordenador
+
+[Delegação por skills](docs/WORK_COORDENADOR.md) organiza tarefas, dependências e revisões inspiradas em EGM, Security Audit e Ponytail. O planejador e a demonstração são opcionais.
+
 ## Revisão independente experimental
 
 A proposta inspirada no [Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model) combina planejamento com contexto e revisão em sessão nova. Os helpers opcionais e uma demonstração estão em [`sentinel/examples/independent-review/`](sentinel/examples/independent-review/). Não executam uma IA nem alteram o Gate.
