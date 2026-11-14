@@ -11,5 +11,5 @@ export { calculateDiff } from './git/diff.js';
 export { StateStore } from './state/state-store.js';
 export type * from './types.js';
 
-export { planWork, reviewProfiles } from "./work-coordinator.js";
-export type { ReviewRole, Surface, WorkState, WorkTask, WorkResult } from "./work-coordinator.js";
+export { planWork, planSwarm, programmerProfile, reviewProfiles } from "./work-coordinator.js";
+export type { ReviewRole, Surface, WorkState, WorkTask, WorkResult, CandidatePair, ReviewPhase, SwarmOpinion, SwarmReports } from "./work-coordinator.js";

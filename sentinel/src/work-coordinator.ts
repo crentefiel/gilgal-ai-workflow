@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
+
 // Planning only: the host owns execution, skill loading, and observed results.
-export type ReviewRole = 'egm' | 'security-audit' | 'ponytail';
+export type ReviewRole = 'egm' | 'security-audit';
 export type Surface = 'architecture' | 'security' | 'complexity';
 export type WorkState = 'pending' | 'running' | 'passed' | 'failed';
 export interface WorkTask {
@@ -17,13 +19,15 @@ export interface WorkResult {
   evidence?: string;
 }
 export const reviewProfiles = {
-  egm: { source: 'https://github.com/google/elephant-goldfish-model', focus: 'Arquitetura, contratos e divergência entre plano e código.' },
+  egm: { source: 'https://github.com/google/elephant-goldfish-model', focus: 'Compare WORK com STABLE: código, contratos, regressões e evidências faltantes.' },
   'security-audit': { source: 'https://github.com/cloudflare/security-audit-skill', focus: 'Fronteiras de confiança, entradas e permissões; diferencie hipótese de achado validado.' },
-  ponytail: { source: 'https://github.com/DietrichGebert/ponytail', focus: 'Solução mínima e reutilização, preservando validação, testes, segurança e acessibilidade.' },
 } as const;
-const routing: Record<Surface, ReviewRole> = {
-  architecture: 'egm', security: 'security-audit', complexity: 'ponytail',
-};
+export const programmerProfile = {
+  role: 'ponytail', source: 'https://github.com/DietrichGebert/ponytail',
+  focus: 'Implemente a menor solução que atende ao contrato, preservando testes e proteções.',
+  access: 'work-only',
+} as const;
+const surfaces = new Set<Surface>(['architecture', 'security', 'complexity']);
 
 function pathKey(file: string): string {
   const key = file.toLowerCase();
@@ -49,7 +53,7 @@ export function planWork(
     if (!/^[a-z0-9][a-z0-9-]*$/.test(task.id) || byId.has(task.id)) throw new Error('Invalid or duplicate task ID');
     if (!task.goal.trim() || !task.acceptance.length ||
         [...task.acceptance, ...task.preserves].some(x => !x.trim())) throw new Error('Task needs a goal and acceptance criteria');
-    if (task.surfaces.some(s => !Object.hasOwn(routing, s))) throw new Error('Unknown review surface');
+    if (task.surfaces.some(s => !surfaces.has(s))) throw new Error('Unknown review surface');
     byId.set(task.id, task);
     scopes.set(task.id, task.writes.map(pathKey));
   }
@@ -83,7 +87,7 @@ export function planWork(
     if (holder(id)) throw new Error('Overlapping writes already running');
     reserve(id);
   }
-  const dispatch: { task: WorkTask; attempt: number; previousFailure?: string }[] = [];
+  const dispatch: { task: WorkTask; attempt: number; worker: typeof programmerProfile; previousFailure?: string }[] = [];
   const waiting: { id: string; reason: 'dependency' | 'write-conflict' | 'attempt-limit'; on: string[] }[] = [];
   for (const task of tasks) {
     const result = results.get(task.id);
@@ -103,12 +107,74 @@ export function planWork(
       continue;
     }
     reserve(task.id);
-    dispatch.push({ task, attempt: (result?.attempt ?? 0) + 1,
+    dispatch.push({ task, worker: programmerProfile, attempt: (result?.attempt ?? 0) + 1,
       ...(result?.evidence === undefined ? {} : { previousFailure: result.evidence }) });
   }
-  const reviews = [...new Set(tasks.flatMap(t => t.surfaces.map(s => routing[s])))].map(role => ({
+  const roles: ReviewRole[] = tasks.length ? ['security-audit', 'egm'] : [];
+  const reviews = roles.map(role => ({
     role, ...reviewProfiles[role], mode: 'fresh-session' as const, access: 'read-only' as const,
   }));
   return { dispatch, waiting, reviews, readyForReview: tasks.length > 0 &&
     tasks.every(task => results.get(task.id)?.state === 'passed') };
+}
+
+export interface CandidatePair { stableSha: string; workSha: string }
+export interface SwarmOpinion extends CandidatePair {
+  planHash: string;
+  phase: ReviewPhase;
+  role: ReviewRole;
+  verdict: 'allow' | 'block';
+  evidence: string;
+}
+export type ReviewPhase = 'security-before' | 'security-after' | 'egm-diff';
+export interface SwarmReports {
+  before?: SwarmOpinion;
+  after?: SwarmOpinion;
+  comparison?: SwarmOpinion;
+}
+
+/**
+ * Advisory planning for one reviewed task plan. The host resolves Git identities,
+ * supplies its observations, and enforces access; these are not Gate approvals.
+ */
+export function planSwarm(
+  tasks: readonly WorkTask[],
+  initial: CandidatePair,
+  current: CandidatePair,
+  reports: SwarmReports = {},
+  results: ReadonlyMap<string, WorkResult> = new Map(),
+  maxAttempts = 2,
+) {
+  for (const sha of [initial.stableSha, initial.workSha, current.stableSha, current.workSha]) {
+    if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('Expected full Git SHA');
+  }
+  const plan = planWork(tasks, results, maxAttempts);
+  const planHash = createHash("sha256").update(JSON.stringify(tasks.map(t =>
+    [t.id, t.goal, t.dependsOn, t.writes, t.acceptance, t.preserves, t.surfaces]))).digest("hex");
+  function opinion(record: SwarmOpinion | undefined, pair: CandidatePair, phase: ReviewPhase, role: ReviewRole) {
+    if (!record || record.phase !== phase || record.role !== role || record.planHash !== planHash || record.stableSha !== pair.stableSha || record.workSha !== pair.workSha) return 'missing';
+    if (!record.evidence.trim() || !['allow', 'block'].includes(record.verdict)) throw new Error('Invalid review opinion');
+    return record.verdict;
+  }
+  const waiting = (phase: ReviewPhase, role: ReviewRole, pair: CandidatePair, status: string) => ({
+    phase, status, request: { phase, role, ...reviewProfiles[role], ...pair, planHash,
+      mode: 'fresh-session' as const, access: 'read-only' as const },
+    dispatch: [], readyForGate: false,
+  });
+  if (!tasks.length || initial.stableSha !== current.stableSha) {
+    return { phase: 'blocked' as const, status: tasks.length ? 'stable-changed' : 'no-tasks', dispatch: [], readyForGate: false };
+  }
+  const before = opinion(reports.before, initial, 'security-before', 'security-audit');
+  if (before !== 'allow') {
+    return waiting('security-before', 'security-audit', initial, before);
+  }
+  if (!plan.readyForReview) {
+    return { phase: 'implementation' as const, status: 'pending', dispatch: plan.dispatch,
+      waiting: plan.waiting, readyForGate: false };
+  }
+  const after = opinion(reports.after, current, 'security-after', 'security-audit');
+  if (after !== 'allow') return waiting('security-after', 'security-audit', current, after);
+  const comparison = opinion(reports.comparison, current, 'egm-diff', 'egm');
+  if (comparison !== 'allow') return waiting('egm-diff', 'egm', current, comparison);
+  return { phase: 'gate' as const, status: 'checks-still-required', dispatch: [], readyForGate: true };
 }

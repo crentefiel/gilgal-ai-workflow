@@ -1,4 +1,4 @@
-import { planWork } from '../../dist/src/work-coordinator.js';
+import { planWork, planSwarm } from '../../dist/src/work-coordinator.js';
 
 const tasks = [
   { id: 'preview', goal: 'Corrigir a prévia do PDF grande',
@@ -19,4 +19,17 @@ const retry = planWork(tasks, results);
 results.set('preview', { state: 'passed', attempt: 2, evidence: 'Fixture sintética: sete folhas na prévia' });
 const verify = planWork(tasks, results);
 results.set('export-test', { state: 'passed', attempt: 1, evidence: 'Fixture sintética: exportação conferida' });
-console.log(JSON.stringify({ mode: 'SIMULATION', initial, retry, verify, review: planWork(tasks, results) }, null, 2));
+const base = { stableSha: 'a'.repeat(40), workSha: 'b'.repeat(40) };
+const final = { ...base, workSha: 'c'.repeat(40) };
+const preflight = planSwarm(tasks, base, base);
+const before = { ...base, phase: 'security-before', role: 'security-audit', planHash: preflight.request.planHash, verdict: 'allow', evidence: 'SYNTHETIC preflight' };
+const after = { ...final, phase: 'security-after', role: 'security-audit', planHash: before.planHash, verdict: 'allow', evidence: 'SYNTHETIC diff review' };
+const comparison = { ...after, phase: 'egm-diff', role: 'egm', evidence: 'SYNTHETIC comparison' };
+const stages = [
+  preflight,
+  planSwarm(tasks, base, base, { before }),
+  planSwarm(tasks, base, final, { before }, results),
+  planSwarm(tasks, base, final, { before, after }, results),
+  planSwarm(tasks, base, final, { before, after, comparison }, results),
+];
+console.log(JSON.stringify({ mode: 'SIMULATION', initial, retry, verify, stages }, null, 2));
